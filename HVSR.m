@@ -1,6 +1,6 @@
 %HVSR MAT
 global Fs Ts traffic_threshold frame_size traffic_duration;
-clear data out_files datfile Ts Fs FileName
+clear data out_files datfile FileName
 close all
 if(~exist('PathName','var'))
     PathName = '';
@@ -62,7 +62,7 @@ end
 %%
 HVSR_H =[];
 HVSR_L =[];
-if(Nsens==1)
+if(Nsens<=2)
     HVSR_H = calculateHVSR(data, OH, window);
     HVSR_L = calculateHVSR(data, OL, window);
 else
@@ -103,53 +103,3 @@ for f=1:1:SperF
 end
 
 return
-% figure(1);clf
-% subaxis(3,2,1,1,2,1, 'PT', 0, 'MT', 0);
-% plot(t,data);hold on;
-
-% running = true;
-% while(running)
-%     windata = data(ws:ws+window_size-1,:).*window;
-%     fftdata = abs(fft(windata, window_size, 1)/window_size);
-%     fftdata = filtfilt(spec_window,1,fftdata(1:window_size/2,:));
-%     fftdata(2:end-1,:) = 2*fftdata(2:end-1,:);
-%     f = Fs/2*(1:window_size/2)'/window_size;
-%      
-%     
-%     HVSRdata = [sqrt(abs(fftdata(:,2)).^2 + abs(fftdata(:,3)).^2) ./ abs(fftdata(:,1)), ...
-%     sqrt(abs(fftdata(:,5)).^2 + abs(fftdata(:,6)).^2) ./ abs(fftdata(:,4))];
-% 
-%     if(exist('h_bars','var'))
-%         delete(h_bars)
-%     end
-%     subaxis(3,2,1,1,2,1, 'PT', 0, 'MT', 0);
-%     h_bars = plot(Ts.*[ws ws], minmax, 'k', ...
-%         Ts.*repmat(ws+window_size,1,2), minmax, 'k');
-%     subaxis(3,2,1,2,2,1, 'PT', 0, 'MT', 0);
-%     plot(t(ws:ws+window_size-1), windata);
-%     axis tight
-%     subaxis(3,2,1,3,1,1, 'PT', 0, 'MT', 0);
-%     semilogx(f, fftdata);
-%     axis([0 2*filter_cutoff 0 1]);
-%     axis autoy
-%     subaxis(3,2,2,3,1,1, 'PT', 0, 'MT', 0);
-%     semilogx(f, HVSRdata);
-%     axis([0 2*filter_cutoff 0 1]);
-%     axis autoy
-%     [x, y, button] = ginput(1);
-%     if(button == 1 || button == 3)
-%         if(button == 1)
-%             ws = floor(x)*Fs;
-%         else
-%             window_size = 2^nextpow2(floor(x)*Fs - ws - 1);
-%             window_size = floor(x)*Fs-ws;
-%         end
-%         if(ws+window_size>length(data))
-%             window_size = length(data)-ws;
-%         end
-%         window = repmat(hann(window_size), 1, Nchan);
-%     end
-%     if(button == 2)
-%         running = false;        
-%     end
-% end

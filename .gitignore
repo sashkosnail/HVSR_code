@@ -15,5 +15,8 @@
 # Simulink Code Generation
 slprj/
 
+*.mat
+*.dat
+
 # Session info
 octave-workspace

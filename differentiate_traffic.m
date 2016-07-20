@@ -1,7 +1,7 @@
 function [frames_Low, frames_High] = differentiate_traffic(signal, filename) 
     global Fs Ts traffic_threshold frame_size traffic_duration;
     vector_data = signal(:,1:3:end).^2+signal(:,2:3:end).^2+signal(:,3:3:end).^2;
-    t = (0:1:length(vector_data)-1)/Fs;
+    t = (0:1:length(vector_data)-1)./Fs;
     th_data=[];
     mid = 0;
     figure; clf
