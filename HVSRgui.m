@@ -1,5 +1,7 @@
 function HVSRgui
-    global Fs Ts frame_size PathName
+    global Fs Ts frame_size PathName traffic_duration traffic_threshold
+    traffic_duration = 13;
+    traffic_threshold = 0.5;
     frame_size = 1024;
     fig = figure(1);
     set(fig, 'ToolBar', 'none');
@@ -26,9 +28,11 @@ end
 function createHVSRTab(tab_group)
     global frame_size
     window = hann(frame_size+1);
-    window = repmat(window(1:end-1), 1, 6);
-    hvsr_tab = uitab('Parent',tab_group,'Title', 'HVSR', ...
-        'UserData', window); %#ok<NASGU>
+    userdata.window = repmat(window(1:end-1), 1, 6);
+    hvsr_tab = uitab('Parent',tab_group,'Title', 'HVSR');
+    userdata.ax_low = subplot(2,1,1, 'Parent', hvsr_tab,'XScale','log'); cla
+    userdata.ax_high = subplot(2,1,2, 'Parent', hvsr_tab,'XScale','log'); cla
+    set(hvsr_tab, 'UserData', userdata);
 end
 function tab_changed(hObject, eventdata)
     global Fs frame_size
@@ -36,7 +40,8 @@ function tab_changed(hObject, eventdata)
         return
     end
     hvsr_tab = eventdata.NewValue;
-    window = get(hvsr_tab, 'UserData');
+    userdata = get(hvsr_tab, 'UserData');
+    window = userdata.window;
     
     HVSR_H =[];
     HVSR_L =[];
@@ -63,8 +68,10 @@ function tab_changed(hObject, eventdata)
     
     freq = Fs*(1:frame_size/2)'/frame_size;
     colors = 'rg';
-    subplot(2,1,2, 'Parent', hvsr_tab); cla
-    subplot(2,1,1, 'Parent', hvsr_tab); cla
+    ax_low = hvsr_tab.UserData.ax_low;
+    axes(ax_low); cla; hold on
+    ax_high = hvsr_tab.UserData.ax_high;
+    axes(ax_high); cla; hold on
     for f=1:1:2
         subsetH = HVSR_H(:,:,f:2:end);
         subsetL = HVSR_L(:,:,f:2:end);
@@ -73,28 +80,30 @@ function tab_changed(hObject, eventdata)
         LmeanHVSR(:,f) = mean(reshape(subsetL, frame_size/2,2*numel(subsetL)/frame_size), 2);
         LstdHVSR(:,f) = std(reshape(subsetL, frame_size/2,2*numel(subsetL)/frame_size), 1, 2);
 
-        subplot(2,1,1, 'Parent', hvsr_tab)
-        semilogx(freq, LmeanHVSR(:,f), [colors(f) '-']); hold on
-        semilogx(freq, LmeanHVSR(:,f)*[1 1]+LstdHVSR(:,f)*[1 -1], [colors(f) '--'])
+        axes(ax_low); hold on
+        semilogx(freq, LmeanHVSR(:,f), [colors(f) '-'], 'LineWidth', 1.5);
+        semilogx(freq, LmeanHVSR(:,f)*[1 1]+LstdHVSR(:,f)*[1 -1], ...
+            [colors(f) '--'])
     %     axis([0.1 30 0 1]); axis autoy; 
         grid on; title('Low')
         axis tight
-        subplot(2,1,2, 'Parent', hvsr_tab)
-        semilogx(freq, HmeanHVSR(:,f), [colors(f) '-']); hold on
-        semilogx(freq, HmeanHVSR(:,f)*[1 1]+HstdHVSR(:,f)*[1 -1], [colors(f) '--'])
+        
+        axes(ax_high); hold on
+        semilogx(freq, HmeanHVSR(:,f), [colors(f) '-'], 'LineWidth', 1.5); 
+        semilogx(freq, HmeanHVSR(:,f)*[1 1]+HstdHVSR(:,f)*[1 -1], ...
+            [colors(f) '--'])
     %     axis([0.1 30 0 1]); axis autoy; 
         grid on; title('High')
         axis tight
     end
 end
-
 function createNewTab(file, tab_group)
     global Ts Fs frame_size PathName traffic_duration traffic_threshold
     tab = uitab('Parent', tab_group, 'Title', file);
     matfile = strcat(PathName, file);
     load(matfile);
     t=D(:,1); %#ok<NODEF>
-    if(Ts~=-1& Ts~=(t(2)-t(1)))
+    if(Ts~=-1 & Ts~=(t(2)-t(1)))
         return
     elseif(Ts == -1)
         Ts = t(2)-t(1);
