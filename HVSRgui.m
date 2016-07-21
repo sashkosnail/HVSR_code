@@ -33,12 +33,21 @@ function createHVSRTab(tab_group)
     userdata.ax_low = subplot(2,1,1, 'Parent', hvsr_tab,'XScale','log'); cla
     userdata.ax_high = subplot(2,1,2, 'Parent', hvsr_tab,'XScale','log'); cla
     set(hvsr_tab, 'UserData', userdata);
+    export_button = uicontrol('Style', 'pushbutton', ...
+        'String', 'Export', 'Callback', @exportHVSR);
+end
+function exportHVSR(hObject, eventdata)
+    global HVSR
+%     hvsr_tab = get(hObject, 'Parent');
+%     HVSR = hvsr_tab.UserData.HVSR;
+    uisave('HVSR','HVSR.mat')    
 end
 function tab_changed(hObject, eventdata)
-    global Fs frame_size
+    global Fs frame_size HVSR
     if(~strcmp(eventdata.NewValue.Title, 'HVSR'))
         return
     end
+    HVSR = struct;
     hvsr_tab = eventdata.NewValue;
     userdata = get(hvsr_tab, 'UserData');
     window = userdata.window;
@@ -79,7 +88,12 @@ function tab_changed(hObject, eventdata)
         HstdHVSR(:,f) = std(reshape(subsetH, frame_size/2,2*numel(subsetH)/frame_size), 1, 2);
         LmeanHVSR(:,f) = mean(reshape(subsetL, frame_size/2,2*numel(subsetL)/frame_size), 2);
         LstdHVSR(:,f) = std(reshape(subsetL, frame_size/2,2*numel(subsetL)/frame_size), 1, 2);
-
+        
+        HVSR.HighSources(f).mean = HmeanHVSR(:,f);
+        HVSR.HighSources(f).std = HstdHVSR(:,f);
+        HVSR.LowSource(f).mean = LmeanHVSR(:,f);
+        HVSR.LowSource(f).std = LstdHVSR(:,f);
+        
         axes(ax_low); hold on
         semilogx(freq, LmeanHVSR(:,f), [colors(f) '-'], 'LineWidth', 1.5);
         semilogx(freq, LmeanHVSR(:,f)*[1 1]+LstdHVSR(:,f)*[1 -1], ...
@@ -96,6 +110,7 @@ function tab_changed(hObject, eventdata)
         grid on; title('High')
         axis tight
     end
+%     set(hvsr_tab, 'UserData', userdata); 
 end
 function createNewTab(file, tab_group)
     global Ts Fs frame_size PathName traffic_duration traffic_threshold
