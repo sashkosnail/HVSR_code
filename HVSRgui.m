@@ -3,7 +3,7 @@ function HVSRgui
     traffic_duration = 13;
     traffic_threshold = 0.5;
     frame_size = 1024;
-    fig = figure(1);
+    fig = figure();
     set(fig, 'ToolBar', 'none');
     tab_group = uitabgroup('Parent', fig, 'SelectionChangedFcn', @tab_changed);
     
@@ -34,7 +34,8 @@ function createHVSRTab(tab_group)
     userdata.ax_high = subplot(2,1,2, 'Parent', hvsr_tab,'XScale','log'); cla
     set(hvsr_tab, 'UserData', userdata);
     export_button = uicontrol('Style', 'pushbutton', ...
-        'String', 'Export', 'Callback', @exportHVSR);
+        'String', 'Export', 'Parent', hvsr_tab, ...
+        'Callback', @exportHVSR);
 end
 function exportHVSR(hObject, eventdata)
     global HVSR
