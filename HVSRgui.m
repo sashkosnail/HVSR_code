@@ -28,7 +28,7 @@ end
 function createHVSRTab(tab_group)
     global frame_size
     window = hann(frame_size+1);
-    userdata.window = repmat(window(1:end-1), 1, 6);
+    userdata.window = repmat(window(1:end-1), 1, 3);
     hvsr_tab = uitab('Parent',tab_group,'Title', 'HVSR');
     userdata.ax_low = subplot(2,1,1, 'Parent', hvsr_tab,'XScale','log'); cla
     userdata.ax_high = subplot(2,1,2, 'Parent', hvsr_tab,'XScale','log'); cla
@@ -38,10 +38,10 @@ function createHVSRTab(tab_group)
         'Callback', @exportHVSR);
 end
 function exportHVSR(hObject, eventdata)
-    global HVSR
+    global HVSR PathName
 %     hvsr_tab = get(hObject, 'Parent');
 %     HVSR = hvsr_tab.UserData.HVSR;
-    uisave('HVSR','HVSR.mat')    
+    uisave('HVSR', strcat(PathName, 'HVSR.mat'));
 end
 function tab_changed(hObject, eventdata)
     global Fs frame_size HVSR
@@ -126,7 +126,7 @@ function createNewTab(file, tab_group)
         Fs = 1/Ts;
     end
     data = D(:,2:end);
-    vector_data = sqrt(data(:,[1 4]).^2+data(:,[2 5]).^2+data(:,[3 6]).^2);
+    vector_data = sqrt(data(:,1).^2+data(:,2).^2+data(:,3).^2);
     DataStruct.t = t;
     DataStruct.Data = data;
     DataStruct.Vector = vector_data;

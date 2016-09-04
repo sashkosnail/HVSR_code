@@ -1,8 +1,9 @@
 function HVSR = calculateHVSR(signal, frame_starts, window)
     window_size = length(window);
-    Nch = size(signal,2)/3;
+    Nch = floor(size(signal,2)/3);
     Nframes = length(frame_starts);
     HVSR = zeros(window_size/2, Nframes, Nch);
+    window = repmat(window, 1, Nch);
     
 %     Fs = 125;
 %     freq = Fs*(1:window_size/2)'/window_size;
