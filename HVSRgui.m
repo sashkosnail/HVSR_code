@@ -38,10 +38,19 @@ function createHVSRTab(tab_group)
         'Callback', @exportHVSR);
 end
 function exportHVSR(hObject, eventdata)
-    global HVSR PathName
+    global HVSR
 %     hvsr_tab = get(hObject, 'Parent');
+%     HVSR_figure = hvsr_tab.Parent.Parent;
 %     HVSR = hvsr_tab.UserData.HVSR;
-    uisave('HVSR', strcat(PathName, 'HVSR.mat'));
+    [FileName,PathName_save] = uiputfile('*.mat', 'Save HVSR Results');
+    if(FileName == 0)
+        return;
+    end
+
+    save(fullfile(PathName_save, FileName), 'HVSR');
+    fig = hObject.Parent.Parent.Parent;
+    print(fig, strcat(PathName_save, FileName(1:end-4), '.png'), '-dpng', '-r0');
+    savefig(fig,strcat(PathName_save, FileName(1:end-4)),'compact');
 end
 function tab_changed(hObject, eventdata)
     global Fs frame_size HVSR
