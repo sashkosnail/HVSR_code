@@ -4,12 +4,10 @@ function HVSRgui
     frame_size = 1024;
     overlap = 0.5;
     Ts=-1;
-    
-    fig = figure(3);
+    fig = figure();
     set(fig, 'ToolBar', 'none');
     tab_group = uitabgroup('Parent', fig, 'SelectionChangedFcn', @tab_changed);
-    
-    if(~exist('PathName', 'var') | PathName == 0)
+    if((PathName == 0) | (~exist('PathName', 'var'))) %#ok<OR2>
         PathName = ''; end
     [FileName, PathName, ~] = uigetfile([PathName, '*.mat'],'Pick File','MultiSelect','on');
     if(~iscell(FileName))
@@ -25,22 +23,27 @@ end
 function createHVSRTab(tab_group)
     global frame_size num_chans
     hvsr_tab = uitab('Parent', tab_group, 'Title', 'HVSR');
-    for k=1:1:num_chans
-        userdata.ax(k) = subplot(num_chans, 1, k, 'Parent', hvsr_tab,'XScale','log'); cla
-    end
     window = hann(frame_size+1);
-    userdata.window = repmat(window(1:end-1), 1, 3);
-    set(hvsr_tab, 'UserData', userdata);
+    hvsr_tab.UserData.window = repmat(window(1:end-1), 1, 3);
+    for k=1:1:num_chans
+       hvsr_tab.UserData.ax(k) = subaxis(num_chans, 1, k, 'Parent', hvsr_tab, ...
+            'Spacing', 0, 'Padding', 0, 'Margin', 0, 'SV', 0.1/num_chans); cla
+    end
     export_button = uicontrol('Style', 'pushbutton', 'String', 'Export', ... 
         'Parent', hvsr_tab, 'Callback', @exportHVSR); %#ok<NASGU>
 end
 function exportHVSR(hObject, ~)
-    global HVSR PathName %#ok<NUSED>
+    global HVSR PathName frame_diff frame_size overlap Fs%#ok<NUSED>
+    hvsr_tab = hObject.Parent; fig = hvsr_tab.Parent.Parent;
+    if(PathName == 0); PathName = pwd; frame_diff = 0.1; frame_size = 1024;
+    overlap = 0.5; Fs=250; end
     [FileName,PathName_save] = uiputfile('*.mat', 'Save HVSR Results', PathName);
     if(FileName == 0) ;return; end
     save(fullfile(PathName_save, FileName), 'HVSR');
-    fig = hObject.Parent.Parent.Parent;
-    print(fig, strcat(PathName_save, FileName(1:end-4), '.png'), '-dpng', '-r0');
+    hvsr_tab.Children(1).Visible = 'off'; P = fig.Position;
+    fig.Units = 'inches'; fig.Position = [1 1 14 10];
+    export_fig(strcat(PathName_save, FileName(1:end-4)), '-c[26 135 50 90]', fig);
+    hvsr_tab.Children(1).Visible = 'on'; fig.Position = P;
     savefig(fig,strcat(PathName_save, FileName(1:end-4)),'compact');
 end
 function tab_changed(hObject, eventdata)
@@ -71,13 +74,13 @@ function tab_changed(hObject, eventdata)
         end
     end
     tmp = [frame_size/2, num_chans];
-    HmeanHVSR = zeros(tmp); 
+    HmeanHVSR = zeros(tmp);
     HstdHVSR = zeros(tmp); 
     LmeanHVSR = zeros(tmp); 
     LstdHVSR = zeros(tmp); 
     freq = Fs*(1:frame_size/2)'/frame_size;
     for k=1:1:num_chans
-        axes(ax(k));cla;hold on
+        axes(ax(k));cla;hold on %#ok<LAXES>
         if(isempty(ax(k).UserData.HVSR_H)&&isempty(ax(k).UserData.HVSR_L))
             continue; end
         HmeanHVSR(:,k) = mean(ax(k).UserData.HVSR_H, 2);
@@ -90,14 +93,20 @@ function tab_changed(hObject, eventdata)
         HVSR.LowSource(k).mean = LmeanHVSR(:,k);
         HVSR.LowSource(k).std = LstdHVSR(:,k);
 
-        semilogx(freq, LmeanHVSR(:,k), 'r-', 'LineWidth', 1.5);
-        semilogx(freq, LmeanHVSR(:,k)*[1 1]+LstdHVSR(:,k)*[1 -1], 'r--')
-        semilogx(freq, HmeanHVSR(:,k), 'b-', 'LineWidth', 1.5); 
-        semilogx(freq, HmeanHVSR(:,k)*[1 1]+HstdHVSR(:,k)*[1 -1], 'b--')
-        grid on; axis tight; hold off
+        h_Lm = semilogx(freq, LmeanHVSR(:,k), 'r-', 'LineWidth', 1.5);
+        h_Ls = semilogx(freq, LmeanHVSR(:,k)*[1 1]+LstdHVSR(:,k)*[1 -1], 'r--');
+        h_Hm = semilogx(freq, HmeanHVSR(:,k), 'b-', 'LineWidth', 1.5); 
+        h_Hs = semilogx(freq, HmeanHVSR(:,k)*[1 1]+HstdHVSR(:,k)*[1 -1], 'b--');
+        if(k==num_chans); legend([h_Lm h_Ls(1) h_Hm h_Hs(1)], ...
+            {'High Source mean', 'High Source \pmstd', ...
+            'Low Source mean', 'Low Source \pmstd'}, ...
+            'FontSize', 12, 'Location', 'northwest'); end %#ok<ALIGN>
+        grid on; axis tight; ax(k).XScale = 'log'; hold off
+        title(ax(k), ['Channel ' num2str(k)], 'Units', 'normalized', ...
+            'Rotation', 90, 'Position', [-0.02 0.5 0]);
     end
+    xlabel('Frequency [Hz]');
 end
-
 function createNewTab(file, tab_group)
     global Ts Fs frame_size PathName num_chans frame_diff overlap
     tab = uitab('Parent', tab_group, 'Title', file);
@@ -134,16 +143,19 @@ function createNewTab(file, tab_group)
             'Units', 'normalized', 'Position', [0 0 1 0.1]);
         use_file_check.UserData.Data = data(:,(1+(kk-1)*3):1:(3*kk));
         use_file_check.UserData.Vector = vector_data(:,kk);
-        chax = subplot(num_chans, 1, kk,  'Parent', tab);
+        chax = subaxis(num_chans, 1, kk, 'Parent', tab, ...
+            'Spacing', 0, 'Padding', 0, 'Margin', 0, ...
+            'SV', 0.2/num_chans);
         set(panels(kk), 'UserData', chax);
         set(tab, 'UserData', panels);
         plot(t,data(:,(1+(kk-1)*3):1:(3*kk)))
         axis tight; hold on
+        chax.YAxisLocation = 'right';
         parameter_changed(wind_size_slider);
     end
     function parameter_changed(hObject, ~, ~)
         panel = hObject.Parent;
-        thisfigure = panel.UserData;
+        thisFigure = panel.UserData;
         ch_data = panel.Children(1).UserData.Data;
         ch_vector = panel.Children(1).UserData.Vector;
         traffic_duration = panel.Children(4).Value;
@@ -166,7 +178,7 @@ function createNewTab(file, tab_group)
         low_level = smooth_vector<alow;
         ahigh = threshold + margin;
         high_level = smooth_vector>ahigh;
-        subplot(thisfigure); hold off
+        subplot(thisFigure); hold off
         plot(t,ch_data,':');hold on
         plot(t, smooth_vector,'k','LineWidth',2)
         plot(t,low_level*(maxval-minval)+minval,'g')
@@ -193,5 +205,6 @@ function createNewTab(file, tab_group)
         end
         panel.Children(1).UserData.Low = frames_Low;
         panel.Children(1).UserData.High = frames_High;
+        thisFigure.YAxisLocation = 'right';
     end
 end
