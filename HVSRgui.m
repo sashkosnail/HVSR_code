@@ -12,11 +12,11 @@ function HVSRgui
     wnd_sliders = [];
     
     frame_margin = 0.1;
-    frame_size = 1024;
+    frame_size = 16384;
     frame_overlap = 0.5;
     Ts=-1;
     
-    fig = figure(); clf
+    fig = figure(1000); clf
     pause(0.00001);
     set(fig, 'ToolBar', 'none');
     set(fig, 'Units', 'Normalized', 'OuterPosition', [0 0 1 1]);
@@ -125,7 +125,7 @@ function createNewTab(file, tab_group)
     end
     data = D(:,2:end);
     data = data - ones(length(data),1)*mean(data);
-    num_chans = size(data,2)/3;
+    num_chans = size(data,2)/3;if(num_chans>4); num_chans=4;end
     vector_data = sqrt(data(:,1:3:end).^2+data(:,2:3:end).^2+data(:,3:3:end).^2);
     for kk=1:1:num_chans
         panels(kk) = uipanel('Position', [0 1-kk/num_chans 0.04 1/num_chans], ...
@@ -133,12 +133,12 @@ function createNewTab(file, tab_group)
         fig_panel = uipanel('Position', ...
             [0.04 1-kk/num_chans 1 1/num_chans], 'Parent', tab');
         threshold_slider = uicontrol('Style', 'slider', ...
-            'Min', 0, 'Max', 1.1, 'Value', 0.22, ...
+            'Min', 0, 'Max', 1.1, 'Value', 1.1, ...
             'Units', 'normalized', 'Position', [0 0.1 0.45 0.8], ...
             'String', 'Threshold', 'SliderStep',[0.05 0.1], ...
             'Callback', @parameter_changed, 'Parent', panels(kk)); %#ok<NASGU>
         wind_size_slider = uicontrol('Style', 'slider', ...
-            'Min', 1, 'Max', Fs*15, 'Value', Fs*11, ...
+            'Min', 1, 'Max', Fs*15, 'Value', Fs*15, ...
             'Units', 'normalized', 'Position', [0.55 0.1 0.45 0.8], ...
             'String', 'Duration', 'SliderStep', Ts*[10 100], ...
             'Callback', @parameter_changed, 'Parent', panels(kk));
@@ -289,6 +289,10 @@ function tab_changed(hObject, eventdata)
         'FontSize', 12, 'Location', 'west');
     
         grid on; axis tight; ax(k).XScale = 'log'; hold off
+        xlim([0.01 32]);
+        if(k~=num_chans)
+            set(gca,'Xticklabel',[]);
+        end
 %         title(ax(k), ['Channel ' num2str(k)], 'Units', 'normalized', ...
 %             'Rotation', 90, 'Position', [-0.02 0.5 0]);
     end
@@ -307,7 +311,7 @@ function exportHVSR(hObject, ~)
     fig.Units = 'inches';
     P = fig.Position;
     fig.Position = [1 0.5 14 10];
-    export_fig(strcat(PathName_save, FileName(1:end-4)), '-c[26 0 0 0]', fig);
+    export_fig(strcat(PathName_save, FileName(1:end-4)), '-c[70 0 0 0]', fig);
     hvsr_tab.Children(1).Visible = 'on'; fig.Position = P;
     savefig(fig,strcat(PathName_save, FileName(1:end-4)),'compact');
     disp([FileName, ' Saved'])
