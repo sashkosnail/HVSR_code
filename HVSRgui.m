@@ -565,15 +565,15 @@ persistent fpeaks upeaks params
 
 		for fi = 1:1:length(all_peaks)
 			params(fi,3) = all_peaks(fi,1);
-			params(fi,1) = 2;
-			params(fi,2) = all_peaks(fi,2);
+			params(fi,2) = 2;
+			params(fi,1) = all_peaks(fi,2);
 			if(numel(PP.CFreqRange) == 1)
 				CFreqRange = all_peaks(fi,1)*[1 1];
 			else
 				CFreqRange = PP.CFreqRange;
 			end
-			LB(fi,:) = [PP.PowerRange(1) PP.GainRange(1) CFreqRange(1)];
-			UB(fi,:) = [PP.PowerRange(2) PP.GainRange(2) CFreqRange(2)];
+			LB(fi,:) = [PP.GainRange(1) PP.PowerRange(1) CFreqRange(1)];
+			UB(fi,:) = [PP.GainRange(2) PP.PowerRange(2) CFreqRange(2)];
 		end
 		
 		params = reshape(params,1,numel(params));

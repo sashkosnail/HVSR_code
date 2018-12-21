@@ -17,8 +17,8 @@ persistent line SkipFrames
 	Wbpf = zeros(N, size(params,1));
 	for fi = 1:1:size(params,1)
 		nrm_f = (f./params(fi,3)).^2;
-		filter_resp = (nrm_f./((1-nrm_f).^2 + nrm_f)).^params(fi,1);
-		Wbpf(:,fi) = offset+gain*params(fi,2)*filter_resp;
+		filter_resp = (nrm_f./((1-nrm_f).^2 + nrm_f)).^params(fi,2);
+		Wbpf(:,fi) = offset+gain*params(fi,1)*filter_resp;
 	end
 	
 	switch type
