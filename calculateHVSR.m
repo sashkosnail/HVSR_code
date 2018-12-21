@@ -21,7 +21,10 @@ function [HVSR_R, VV, HVSR_X, HVSR_Y] = calculateHVSR(signal, frame_starts, wind
             windata = signal(idx:idx+window_size-1,(3*ch-2):(3*ch)).*window;
             fftdata = abs(fft(windata, window_size, 1)/window_size);
             fftdata = fftdata(1:window_size/2,:)+fftdata(end:-1:1+window_size/2,:);
-            fftdata = smoothFFT(fftdata, fftSmoothN, freq, 0);
+			if(fftSmoothN >=1)
+				fftdata = smoothFFT(fftdata, fftSmoothN, freq, 0);
+			end
+				
             X = fftdata(:,1);
             Y = fftdata(:,2);
             Z = fftdata(:,3);

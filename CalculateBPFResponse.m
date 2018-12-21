@@ -12,8 +12,12 @@ persistent line SkipFrames
 			offset = 0;
 	end
 	
-	params = reshape(params, numel(params)/3, 3);
-	
+	K = 2*length(params)/3;
+	ff = params((K+1):end);
+	fo = params(1:K);
+	params = [reshape(fo',2,numel(fo)/2)' ff'];	
+% 	params = reshape(params, numel(params)/3, 3);
+
 	Wbpf = zeros(N, size(params,1));
 	for fi = 1:1:size(params,1)
 		nrm_f = (f./params(fi,3)).^2;

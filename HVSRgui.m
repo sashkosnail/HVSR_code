@@ -504,7 +504,13 @@ persistent fpeaks upeaks params
 			{'HVSR', 'ParallelEq', 'BPFs', ...
 			['Error RMS:' num2str(rms(error))]}, ...
 			'FontSize', 12, 'Location', 'west');
-		params = reshape(params, numel(params)/3, 3);
+		
+		K = 2*length(params)/3;
+		ff = params((K+1):end);
+		fo = params(1:K);
+		params = [reshape(fo',2,numel(fo)/2)' ff'];		
+% 		params = reshape(params, numel(params)/3, 3);
+
 		HVSR.ModelParams = params;
 	end
 	
@@ -576,9 +582,13 @@ persistent fpeaks upeaks params
 			UB(fi,:) = [PP.GainRange(2) PP.PowerRange(2) CFreqRange(2)];
 		end
 		
-		params = reshape(params,1,numel(params));
-		LB = reshape(LB,1,numel(LB));
-		UB = reshape(UB,1,numel(UB));
+% 		params = reshape(params,1,numel(params));
+% 		LB = reshape(LB,1,numel(LB));
+% 		UB = reshape(UB,1,numel(UB));
+		
+		params = [reshape(params(:,1:2)',1, numel(params(:,1:2))) params(:,3)'];
+		LB = [reshape(LB(:,1:2)',1, numel(LB(:,1:2))) LB(:,3)'];
+		UB = [reshape(UB(:,1:2)',1, numel(UB(:,1:2))) UB(:,3)'];
 
 		options = optimoptions('fmincon');
 		options.Algorithm = 'sqp';
