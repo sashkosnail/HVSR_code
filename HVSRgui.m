@@ -38,6 +38,7 @@ function HVSRgui
     end
     createHVSRTab(tab_group);
 	createModelTab(tab_group);
+	createTestTab(tab_group);
 
     start_position = [10 30];		
     next_size = [100 20];
@@ -164,7 +165,12 @@ function HVSRgui
     Export_button = uicontrol('Style', 'pushbutton', 'String', 'Export', ... 
         'Parent', fig, 'Callback', @exportHVSR, 'Units', 'pixels',...
 		'Position', [start_position next_size]); %#ok<NASGU>
+	next_size = [120 30];
+	start_position(1) = start_position(1) + next_size(1) + 10;
 	
+    Test_button = uicontrol('Style', 'pushbutton', 'String', 'Test Model', ... 
+        'Parent', fig, 'Callback', @exportHVSR, 'Units', 'pixels',...
+		'Position', [start_position next_size]); %#ok<NASGU>
 	
     figure(fig);
 end
@@ -172,7 +178,6 @@ end
 function createModelTab(tab_group)
 global model_tab
 	model_tab = uitab('Parent', tab_group, 'Title', 'ModelHVSR');
-	
 	model_tab.UserData.ax = axes('Parent', model_tab, 'DefaultLineLineWidth', 2, ...
 		'Units', 'normalized', 'Position', [0.025 0.05 0.97 0.94], ...
 		'XScale', 'log', 'XGrid', 'on', 'YGrid', 'on', 'NextPlot', 'add');
@@ -182,12 +187,19 @@ end
 function createHVSRTab(tab_group)
     global num_chans hvsr_tab
     hvsr_tab = uitab('Parent', tab_group, 'Title', 'HVSR');
-	
 	for k=1:1:num_chans
 	   hvsr_tab.UserData.ax(k) = subplot('Position', ...
 		   [0.025 1-k/num_chans+0.05 0.97 1/num_chans-0.06], 'Parent', hvsr_tab);
 	   grid on;
 	end
+end
+
+function createTestTab(tab_group)
+	global test_tab
+	test_tab = uitab('Parent', tab_group, 'Title', 'Test Model');
+	test_tab.UserData.ax = axes('Parent', test_tab, 'DefaultLineLineWidth', 2, ...
+		'Units', 'normalized', 'Position', [0.025 0.05 0.97 0.94], ...
+		'XScale', 'log', 'XGrid', 'on', 'YGrid', 'on', 'NextPlot', 'add');
 end
 
 function createSignalTab(file, tab_group)
@@ -365,7 +377,7 @@ function calcHVSR(~,~)
 		ax(k).UserData.LVert =[];		
     end
     tabs = hvsr_tab.Parent.Children;
-    for idx = 1:1:length(tabs)-2
+    for idx = 1:1:length(tabs)-3
         tab = tabs(idx);
         chan_panels = tab.UserData;
         for k = 1:1:num_chans
@@ -486,7 +498,7 @@ persistent fpeaks upeaks params
 				PP.MinPeakProminence);
 			fpeaks = [loc, pk];
 		end
-		problem = SetupProblem(params);
+		problem = SetupProblem();
 		
 		params = fmincon(problem);
 % 		result = CalculateBPFResponse(params, 'freq-prod', 0);
@@ -514,7 +526,7 @@ persistent fpeaks upeaks params
 		HVSR.ModelParams = params;
 	end
 	
-	function problem = SetupProblem(old_params)
+	function problem = SetupProblem()
 		while 1
 			if(~isempty(upeaks))
 				hupeaks = semilogx(upeaks(:,1), upeaks(:,2), ...
@@ -527,7 +539,7 @@ persistent fpeaks upeaks params
 			[x, y, button] = ginput(1);
 			
 			if (isempty(button))
-				continue;
+				button = 3;
 			end
 	
 			switch button
