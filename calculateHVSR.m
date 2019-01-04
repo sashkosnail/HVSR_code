@@ -1,6 +1,11 @@
 function [HVSR_R, HVSR_X, HVSR_Y, VV, RR] = calculateHVSR(signal, frame_starts, window, draw)
-    global frame_size Fs fftSmoothN
+    global HVSR 
 	persistent SkipFrames
+	
+	frame_size = length(window);
+	fftSmoothN = HVSR.params.fftSmoothN;
+	Fs = HVSR.Fs;
+	
     freq = Fs*(0:frame_size/2-1)'/frame_size;
 	
 	[b, a] = butter(4, 2*0.1/Fs, 'high');
