@@ -33,10 +33,11 @@ function HVSRgui
     tab_group = uitabgroup('Parent', fig, 'Units', 'normalized', ...
         'Position', [0, 0.05, 1, 0.95]);
 	HVSR.UIParams.tab_group = tab_group;
-    for idx = 1:1:length(FileName)
-        createSignalTab(FileName{idx});
-    end
-    createHVSRTab(tab_group);
+	for idx = 1:1:length(FileName)
+		createSignalTab(FileName{idx});
+	end
+	
+	createHVSRTab(tab_group);
 	createModelTab(tab_group);
 	createTestTab(tab_group);
 	
@@ -178,6 +179,13 @@ function HVSRgui
         'Parent', fig, 'Callback', @testModel, 'Units', 'pixels',...
 		'Position', [start_position next_size]); %#ok<NASGU>
 	
+	next_size = [100 30];
+	start_position(1) = start_position(1) + next_size(1) + 20;
+	
+    hideSTD_cb = uicontrol('Style', 'checkbox', 'String', 'Hide STD', ... 
+        'Parent', fig, 'Callback', @hideSTD, 'Units', 'pixels',...
+		'Position', [start_position next_size], 'Value', 0); %#ok<NASGU>
+	
     figure(fig);
 end
 
@@ -187,7 +195,7 @@ global HVSR
 	model_tab.UserData.ax = axes('Parent', model_tab, 'DefaultLineLineWidth', 2, ...
 		'Units', 'normalized', 'Position', [0.06 0.075 0.935 0.92], ...
 		'XScale', 'log', 'XGrid', 'on', 'YGrid', 'on', 'NextPlot', 'add', ...
-		   'FontSize', 16, 'GridColor', [1 1 1]*0.7, 'GridAlpha', 1);
+		   'FontSize', 20, 'GridColor', [1 1 1]*0.7, 'GridAlpha', 1);
 	HVSR.UIParams.model_tab = model_tab;
 end
 
@@ -200,7 +208,7 @@ function createHVSRTab(tab_group)
 		   [0.06 1-(k/num_chans)+0.075 0.935 1/num_chans-0.1], ...
 		   'DefaultLineLineWidth', 2, 'Parent', hvsr_tab, ...
 			'GridColor', [1 1 1]*0.7, 'GridAlpha', 1, ...
-		    'FontSize', 16);
+		    'FontSize', 20);
 	   grid on;
 	end
 	HVSR.UIParams.hvsr_tab = hvsr_tab;
@@ -215,17 +223,20 @@ function createTestTab(tab_group)
 			'NextPlot', 'add', 'XScale', 'linear', 'XGrid', 'on', ...
 			'YGrid', 'on', 'GridColorMode', 'manual', ...
 			'GridColor', [1 1 1]*0.7, 'GridAlpha', 1, ...
-		   'FontSize', 16, 'Position', [0.06 0.99-n*0.295 0.935 0.29]);
+		    'FontSize', 20, 'Position', [0.06 0.99-n*0.295 0.54 0.29]);
+	   test_tab.UserData.Fax(n) = axes('Parent', test_tab, ...
+			'DefaultLineLineWidth', 2, 'Units', 'normalized', ...
+			'NextPlot', 'add', 'XScale', 'log', 'XGrid', 'on', ...
+			'YGrid', 'on', 'YScale', 'log', 'GridColorMode', 'manual', ...
+			'GridColor', [1 1 1]*0.7, 'GridAlpha', 1, ...
+		    'FontSize', 20, 'Position', [0.66 0.99-n*0.295 0.32 0.29]);
 		 if(n~=3)
 			 test_tab.UserData.Tax(n).XAxis.Visible = 'off';
+			 test_tab.UserData.Fax(n).XAxis.Visible = 'off';
 		 end
 	end
 	linkaxes(test_tab.UserData.Tax);
-	fff = figure(182754); clf(fff)
-	test_tab.UserData.Fax = axes('Parent', fff, 'DefaultLineLineWidth', 2, ...
-		'XScale', 'log', 'YScale', 'log', 'XGrid', 'on', 'YGrid', 'on', 'NextPlot', 'add', ...
-		   'FontSize', 16, 'GridColor', [1 1 1]*0.7, 'GridAlpha', 1);
-	   %'Units', 'normalized', 'Position', [0.025 0.02 0.97 0.20], ...
+	linkaxes(test_tab.UserData.Fax);
 	HVSR.UIParams.test_tab = test_tab;
 end
 
@@ -311,7 +322,7 @@ function createSignalTab(file)
 		use_file_check.UserData.Data = tmp;
         use_file_check.UserData.Vector = vector_data(:,kk);
         chax = subplot('Position', [0.06 0.05 0.935 0.94], ...
-		   'FontSize', 16, 'Parent',fig_panel);
+		   'FontSize', 20, 'Parent',fig_panel);
 		set(fig_panel, 'UserData', panels(kk));
         set(panels(kk), 'UserData', chax);
         set(tab, 'UserData', panels);
@@ -377,7 +388,7 @@ function parameter_changed(hObject, ~, ~)
 	frame_overlap = HVSR.params.frame_overlap;
 	
     panel = hObject.Parent;
-    thisFigure = panel.UserData;
+    ax = panel.UserData;
     ch_data = panel.Children(1).UserData.Data;
     ch_vector = panel.Children(1).UserData.Vector;
     traffic_duration = panel.Children(4).Value;
@@ -401,16 +412,16 @@ function parameter_changed(hObject, ~, ~)
     low_level = smooth_vector<alow;
     ahigh = threshold + margin;
     high_level = smooth_vector>ahigh;
-    subplot(thisFigure); hold off
+    cla(ax)
+	ax.FontSize = 20;
     t = (0:1:length(ch_data)-1)/Fs;
-    plot(t, ch_data,':');hold on
-    plot(t, smooth_vector,'k','LineWidth',2)
-    plot(t, low_level*(maxval-minval)+minval,'g')
-    plot(t, high_level*(maxval-minval)+minval,'m')
-    plot(t([1, end]), [1 1]*alow,'r--');
-    plot(t([1, end]), [1 1]*ahigh,'b--');
-    plot(t([1, end]), [1 1]*threshold,'k');
-%     axis([0 t(end) min(min(ch_data)) 1.1*max(max([ch_data smooth_vector]))]);%[-0.707 0.707]])
+    plot(ax, t, ch_data,':');hold on
+    plot(ax, t, smooth_vector,'k','LineWidth',2)
+    plot(ax, t, low_level*(maxval-minval)+minval,'g')
+    plot(ax, t, high_level*(maxval-minval)+minval,'m')
+    plot(ax, t([1, end]), [1 1]*alow,'r--');
+    plot(ax, t([1, end]), [1 1]*ahigh,'b--');
+    plot(ax, t([1, end]), [1 1]*threshold,'k');
     frames_Low = findFrames(low_level, frame_size, frame_overlap);
     frames_High = findFrames(high_level, frame_size, frame_overlap); 
     bound = min(min(ch_data))*[1 1];
@@ -418,14 +429,13 @@ function parameter_changed(hObject, ~, ~)
 	plot_frames(frames_High, bound, 'm', 1)
     panel.Children(1).UserData.Low = frames_Low;
     panel.Children(1).UserData.High = frames_High;
-%     thisFigure.YAxisLocation = 'right';
 	xlabel('Time [s]');ylabel('Amplitude [mm/s]');
 	axis tight;
 	
 	function plot_frames(frames, bound, color, type)
 		count = 0;
 		for fi=frames
-			h = plot([fi, fi+frame_size]/Fs,...
+			h = plot(ax, [fi, fi+frame_size]/Fs,...
 					bound*(1-0.9/5*(mod(count,5)+1)), ...
 					'LineWidth',3,'Color',color);
 			count = count+1;
@@ -502,19 +512,19 @@ function calcHVSR(~,~)
 	LmeanR = zeros(tmp);  
 	HmeanR = zeros(tmp); 
     freq = Fs*(0:frame_size/2-1)'/frame_size;
-    for k=1:1:num_chans
-        axes(ax(k));cla(ax(k));hold on %#ok<LAXES>
-        if(~isempty(ax(k).UserData.HVSR_H))
-            HmeanHVSR(:,k) = mean(ax(k).UserData.HVSR_H, 2);
-            HstdHVSR(:,k) = std(ax(k).UserData.HVSR_H, 1, 2);
+	for k=1:1:num_chans
+		axes(ax(k));cla(ax(k));hold on %#ok<LAXES>
+		if(~isempty(ax(k).UserData.HVSR_H))
+			HmeanHVSR(:,k) = mean(ax(k).UserData.HVSR_H, 2);
+			HstdHVSR(:,k) = std(ax(k).UserData.HVSR_H, 1, 2);
 			HmeanV = mean(ax(k).UserData.HV, 2);
 			HmeanR = mean(ax(k).UserData.HR, 2);
-        else
-            HmeanHVSR(:,k) = 0;
-            HstdHVSR(:,k) = 0;
+		else
+			HmeanHVSR(:,k) = 0;
+			HstdHVSR(:,k) = 0;
 			HmeanV(:,k) = 0;
 			HmeanR(:,k) = 0;
-        end
+		end
 		if(~isempty(ax(k).UserData.HVSR_L))
 			LmeanHVSR(:,k) = mean(ax(k).UserData.HVSR_L, 2);
 			LstdHVSR(:,k) = std(ax(k).UserData.HVSR_L, 1, 2);
@@ -526,40 +536,45 @@ function calcHVSR(~,~)
 			LmeanV(:,k) = 0;
 			LmeanR(:,k) = 0;
 		end
-		  
-        num_H = size(ax(k).UserData.HVSR_H,2);
-        num_L = size(ax(k).UserData.HVSR_L,2);
-        
-        HVSR.HighSources(k).mean = HmeanHVSR(:,k);
-        HVSR.HighSources(k).std = HstdHVSR(:,k);
+
+		num_H = size(ax(k).UserData.HVSR_H,2);
+		num_L = size(ax(k).UserData.HVSR_L,2);
+
+		HVSR.HighSources(k).mean = HmeanHVSR(:,k);
+		HVSR.HighSources(k).std = HstdHVSR(:,k);
 		HVSR.HighSources(k).V = HmeanV(:,k);
 		HVSR.HighSources(k).R = HmeanR(:,k);
-        HVSR.LowSources(k).mean = LmeanHVSR(:,k);
-        HVSR.LowSources(k).std = LstdHVSR(:,k);
+		HVSR.LowSources(k).mean = LmeanHVSR(:,k);
+		HVSR.LowSources(k).std = LstdHVSR(:,k);
 		HVSR.LowSources(k).V = LmeanV(:,k);
 		HVSR.LowSources(k).R = LmeanR(:,k);
 		HVSR.f = freq;
 		
-% 		tot = ax(k).UserData.T;
-% 		h_tot = semilogx(Fs*(0:tot/2-1)'/length(tot), tot, 'k--', 'LineWidth', 1.5);
-        h_Lm = semilogx(freq, LmeanHVSR(:,k), 'r-');
-        h_Ls = semilogx(freq, LmeanHVSR(:,k)*[1 1]+LstdHVSR(:,k)*[1 -1], ...
+		h_Lm = semilogx(freq, LmeanHVSR(:,k), 'r-');
+		h_Ls = semilogx(freq, LmeanHVSR(:,k)*[1 1]+LstdHVSR(:,k)*[1 -1], ...
 			'r--', 'LineWidth', 1);
-        h_Hm = semilogx(freq, HmeanHVSR(:,k), 'b-'); 
-        h_Hs = semilogx(freq, HmeanHVSR(:,k)*[1 1]+HstdHVSR(:,k)*[1 -1], ...
+		h_Hm = semilogx(freq, HmeanHVSR(:,k), 'b-'); 
+		h_Hs = semilogx(freq, HmeanHVSR(:,k)*[1 1]+HstdHVSR(:,k)*[1 -1], ...
 			'b--', 'LineWidth', 1);
-        legend([h_Lm h_Ls(1) h_Hm h_Hs(1)], ...
-        {['Low Source mean N=', num2str(num_L)], 'Low Source \pmstd', ...
-        ['High Source mean N=', num2str(num_H)], 'High Source \pmstd'}, ...
-        'FontSize', 12, 'Location', 'west');
-    
-        grid on; axis tight; ax(k).XScale = 'log'; hold off
-        xlim([min(freq) 50]);
-        if(k~=num_chans)
-            set(gca,'Xticklabel',[]);
-        end
-%         title(ax(k), ['Channel ' num2str(k)], 'Units', 'normalized', ...
-%             'Rotation', 90, 'Position', [-0.02 0.5 0]);
+% 		l=legend('show');
+% 		set(l,'FontSize', 20, 'Location', 'west');
+		legend([h_Lm h_Ls(1) h_Hm h_Hs(1)], ...
+		{['Low Source mean N=', num2str(num_L)], 'Low Source \pmstd', ...
+		['High Source mean N=', num2str(num_H)], 'High Source \pmstd'}, ...
+		'FontSize', 20, 'Location', 'west');
+% 		legend([h_Lm h_Hm], ...
+% 		{['Low Source mean N=', num2str(num_L)], ...
+% 		['High Source mean N=', num2str(num_H)]}, ...
+% 		'FontSize', 20, 'Location', 'west');
+		HVSR.UIParams.hSTD{k} = [h_Ls h_Hs];
+		HVSR.UIParams.hMean{k} = [h_Lm h_Hm]; 
+		grid on; axis tight; ax(k).XScale = 'log'; hold off
+		xlim([min(freq) 50]);
+		if(k~=num_chans)
+			set(gca,'Xticklabel',[]);
+		end
+	%         title(ax(k), ['Channel ' num2str(k)], 'Units', 'normalized', ...
+	%             'Rotation', 90, 'Position', [-0.02 0.5 0]);
 		ax(k).XTickLabel = ax(k).XTick;
 	end
     xlabel('Frequency [Hz]');
@@ -627,16 +642,16 @@ persistent fpeaks upeaks params
 			[result, Wbpf]= CalculateBPFResponse(params,'freq-sum',0,f);
 			error = abs(result-data)./data;
 
-			p4 = semilogx(f, result, 'r', 'Parent', ax);
+			p4 = semilogx(f, result, 'k', 'Parent', ax);
 			p5 = semilogx(f, Wbpf, 'k--','LineWidth', 1, 'Parent', ax);
-			p6 = semilogx(f, error,'g--', 'Parent', ax);
+			p6 = semilogx(f, error,'r--', 'Parent', ax);
 			grid on; axis tight; ax.XScale = 'log'; hold off
 			xlim(ax, [min(f) 50]);
 
 			legend([p1(1) p4(1) p5(1) p6(1)], ...
-				{'HVSR', 'ParallelEq', 'BPFs', ...
+				{'HVSR', 'Model Response', 'BandPass Filters', ...
 				['Error RMS:' num2str(rms(error))]}, ...
-				'FontSize', 12, 'Location', 'west');
+				'FontSize', 20, 'Location', 'west');
 			HVSR.ModelParams = params;
 			xlabel('Frequency [Hz]');
 			ylabel('Ratio Amplitude');
@@ -763,27 +778,32 @@ global HVSR
 	[bpf, ~] = CalculateBPFResponse(params, 'freq-sum', 0);
 	k = repmat([bpf 1./bpf], 1, 2);
 	calcVR = HLVR.*k;
-	if(ishandle(test_tab.UserData.Fax))
-		cla(test_tab.UserData.Fax);
-		h = loglog(HVSR.f, HLVR, 'Parent', test_tab.UserData.Fax);
-		set(h, {'Color'}, {[0 0 1]; [0 1 0]; [1 0 0]; [0 0 0]});
-		h=loglog(HVSR.f, calcVR, '--', 'Parent', test_tab.UserData.Fax);
-		set(h, {'Color'}, {[0 1 0]; [0 0 1]; [0 0 0]; [1 0 0]});
-		legend(test_tab.UserData.Fax, 'HV', 'HR', 'LV', 'LR', ...
-			'HV*HVSR', 'HR/HVSR', 'LV*HVSR', 'LR/HVSR')
-		xlim(test_tab.UserData.Fax, [0.1 50]);
-		xlabel(test_tab.UserData.Fax, 'Frequency[Hz]')
-		ylabel(test_tab.UserData.Fax, 'Velolcity [mm/s]$/\sqrt{Hz}$', ...
-			'Interpreter','latex');
-		
-		test_tab.UserData.Fax.XTickLabel = test_tab.UserData.Fax.XTick;
-	end
+	
+	fff = figure(182754); clf(fff)
+	ax = axes('Parent', fff, 'DefaultLineLineWidth', 2, ...
+		'XScale', 'log', 'YScale', 'log', 'XGrid', 'on', 'YGrid', 'on', 'NextPlot', 'add', ...
+		   'FontSize', 20, 'GridColor', [1 1 1]*0.7, 'GridAlpha', 1);
+	   %'Units', 'normalized', 'Position', [0.025 0.02 0.97 0.20], ...
+	
+	h = loglog(HVSR.f, HLVR, 'Parent', ax);
+	set(h, {'Color'}, {[0 0 1]; [0 1 0]; [1 0 0]; [0 0 0]});
+	h=loglog(HVSR.f, calcVR, '--', 'Parent', ax);
+	set(h, {'Color'}, {[0 1 0]; [0 0 1]; [0 0 0]; [1 0 0]});
+	legend(ax, 'Strong Source Vertical', ...
+		'Strong Source Horizontal', 'Noise Source Vertical', ...
+		'Noise Source Horizontal', ...
+		'HV*HVSR', 'HR/HVSR', 'LV*HVSR', 'LR/HVSR')
+	xlim(ax, [0.1 50]);
+	xlabel(ax, 'Frequency[Hz]')
+	ylabel(ax, 'Velolcity [mm/s]$/\sqrt{Hz}$', ...
+		'Interpreter','latex');
+
+	ax.XTickLabel = ax.XTick;
+	test_tab.UserData.FFF = fff;
 	
 	data = HVSR.Data{1};
-	
-	freq = HVSR.Fs*(0:(length(data)-1)/2)'/length(data);
-	freq = [freq; freq(end-mod(length(data),2):-1:1)];
-
+	f = HVSR.Fs*(0:(length(data)-1)/2)'/length(data);
+	freq = [f; f(end-mod(length(data),2):-1:1)];
 	[bpf, ~] = CalculateBPFResponse(params, 'freq-sum', 0, freq);
 	fftdata = fft(data, length(data), 1);
 	
@@ -792,41 +812,51 @@ global HVSR
 	
 	ampl = ampl.*[repmat(1./bpf, 1, 2) bpf];
 	theta = [theta(:,1) theta(:,2) theta(:,3)];
-	fftdata_mod = ampl.*exp(1j*theta);
-% 	fftdata_mod = fftdata.*[repmat(1./bpf, 1, 2) bpf];
-	 
+	fftdata_mod = ampl.*exp(1j*theta);	 
 	data_mod = ifft(fftdata_mod, 'symmetric');
-% 	data = [data sqrt(data(:,1).^2+data(:,2).^2)];
-% 	data_mod = [data_mod sqrt(data_mod(:,1).^2+data_mod(:,2).^2)];
 	
-	d1 = {'T', 'R', 'V'};
-	d2 = {'T/HVSR', 'R/HVSR', 'V*HVSR'};
+	fftdata = abs(fftdata(ceil(1:length(data)/2),:));
+	fftdata(2:end-1,:) = 2*fftdata(2:end-1,:);
+	fftdata_mod = abs(fftdata_mod(ceil(1:length(data)/2),:));
+	fftdata_mod(2:end-1,:) = 2*fftdata_mod(2:end-1,:);
 	
+% 	if(HVSR.params.fftSmoothN >=1)
+% 		fftdata = smoothFFT(fftdata, HVSR.params.fftSmoothN, f, 0);
+% 		fftdata_mod = smoothFFT(fftdata_mod, HVSR.params.fftSmoothN, f, 0);
+% 	end
+	
+	d1 = {'Transverse', 'Radial', 'Vertical'};
+	d2 = {'Transverse/HVSR', 'Radial/HVSR', 'Vertical*HVSR'};
+	t = (1:1:length(data))./HVSR.Fs;
 	for n=1:1:3
-		ax = test_tab.UserData.Tax(n);
-		cla(ax);
-		ax.YTickLabelMode = 'auto';
-		t = (1:1:length(data))./HVSR.Fs;
-		h = plot(t, data(:,n), 'k', 'Parent', ax);
-% 		set(h, {'Color'}, {[0 0 1]; [0 1 0]; [1 0 0]});
+		tax = test_tab.UserData.Tax(n); cla(tax);
+		fax = test_tab.UserData.Fax(n); cla(fax);
+		tax.YTickLabelMode = 'auto';
+		fax.YTickLabelMode = 'auto';
+		plot(t, data(:,n), 'k', 'Parent', tax);
+		loglog(f, fftdata(:,n), 'k', 'Parent', fax);
 		if(n~=3)
-			h = plot(t, data_mod(:,n), 'r', 'Parent', ax);
-% 		set(h, {'Color'}, {[0 0 1]; [0 1 0]; [1 0 0]});
-			legend(ax, d1{n}, d2{n});
+			plot(t, data_mod(:,n), 'r', 'Parent', tax);
+			loglog(f, fftdata_mod(:,n), 'r', 'Parent', fax);
+			legend(tax, d1{n}, d2{n});
+			legend(fax, d1{n}, d2{n},'Location','southwest');
 		else
-			legend(ax, d1{n});
+			legend(tax, d1{n});
+			loglog(f, fftdata_mod(:,n), 'r', 'Parent', fax);
+			set(fax, 'Children', flipud(fax.Children))
+			legend(fax, d1{n}, d2{n},'Location','southwest');
 		end
-% 		xlim(ax, [245 252]);
-		axis(ax, [t(1) t(end) max(max(abs([data data_mod(:,1:2)])))*[-1.1 1.1]]);
-% 		ax.YTick = ax.YTick(1:end-1);
-% 		ax.YTickLabel = ax.YTick;
+		axis(tax, [t(1) t(end) max(max(abs([data data_mod(:,1:2)])))*[-1.1 1.1]]);
+		axis(fax, [0.1 HVSR.Fs/2 0.01 1.5*10^3]);
+		fax.YMinorTick = 'on';
 		if(n==2)
-			ylabel(ax, 'Velocity [mm/s]')
+			ylabel(tax, 'Velocity [mm/s]', 'Interpreter','tex')
+			ylabel(fax, 'Velolcity [mm/s]/\surd{Hz}', ...
+		'Interpreter','tex');
 		end
 	end
-	
-	xlabel(ax, 'Time [s]')
-	
+	xlabel(tax, 'Time [s]');
+	xlabel(fax, 'Frequency [Hz]');
 end
 
 function loadModel(~,~)
@@ -847,6 +877,36 @@ global PathName HVSR
 	end
 end
 
+function hideSTD(hObject, ~)
+global HVSR
+	h_std = HVSR.UIParams.hSTD;
+	h_mean = HVSR.UIParams.hMean;
+	if(hObject.Value == 0)
+		state = 'on';
+	else
+		state = 'off';
+	end
+	for k=1:1:HVSR.params.num_chans
+		for n=1:1:numel(h_std{k})
+			h_std{k}(n).Visible = state;
+		end
+		ax = HVSR.UIParams.hvsr_tab.UserData.ax(k);
+		num_H = size(ax.UserData.HVSR_H,2);
+		num_L = size(ax.UserData.HVSR_L,2);
+		if(strcmp(state, 'on'))
+			legend(ax, [h_mean{k}(1) h_std{k}(1) h_mean{k}(2) h_std{k}(3)], ...
+		{['Low Source mean N=', num2str(num_L)], 'Low Source \pmstd', ...
+		['High Source mean N=', num2str(num_H)], 'High Source \pmstd'}, ...
+		'FontSize', 20, 'Location', 'west');
+		else
+			legend(ax, [h_mean{k}(1) h_mean{k}(2)], ...
+		{['Low Source mean N=', num2str(num_L)], ...
+		['High Source mean N=', num2str(num_H)]}, ...
+		'FontSize', 20, 'Location', 'west');
+		end
+	end
+end
+
 function exportHVSR(hObject, ~)
     global HVSR PathName 
 	fig = hObject.Parent;
@@ -860,23 +920,13 @@ function exportHVSR(hObject, ~)
     fig.Position = [1 0.5 14 10];
     export_fig(strcat(PN_save, FileName(1:end-4)), '-c[0 0 0 0]', fig);
 	WindowAPI(fig, 'Maximize');
-	WindowAPI(test_tab.UserData.Fax.Parent, 'Maximize');
 	savefig(fig,strcat(PN_save, FileName(1:end-4)),'compact');
-    savefig(test_tab.UserData.Fax.Parent,strcat(PN_save, FileName(1:end-4),'_spec'),'compact');
+	if(ishandle(test_tab.UserData.Fax))
+		WindowAPI(test_tab.UserData.FFF, 'Maximize');
+		savefig(test_tab.UserData.FFF, ...
+			strcat(PN_save, FileName(1:end-4),'_spec'),'compact');
+	end
     disp([FileName, ' Saved'])
-end
-function exportHVSR2(hObject, ~)
-    global HVSR PathName 
-	fig = hObject.Parent;
-    if(PathName == 0); PathName = pwd; end 
-    [FileName,PN_save] = uiputfile('*.mat', ...
-		'Save HVSR Results and Model', PathName);
-    if(FileName == 60) ;return; end
-    fig.Units = 'inches';
-    fig.Position = [1 0.5 14 10];
-    export_fig(strcat(PN_save, FileName(1:end-4)), '-c[0 0 0 0]', fig);
-	WindowAPI(fig, 'Maximize');
-	disp([FileName, ' Saved'])
 end
 
 
