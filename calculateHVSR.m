@@ -1,4 +1,6 @@
-function [HVSR_R, HVSR_X, HVSR_Y, VV, RR] = calculateHVSR(signal, frame_starts, window, draw)
+function [HVSR_R, HVSR_X, HVSR_Y, XX, YY, VV, RR] = ...
+	calculateHVSR(signal, frame_starts, window, draw)
+
     global HVSR 
 	persistent SkipFrames
 	
@@ -19,6 +21,8 @@ function [HVSR_R, HVSR_X, HVSR_Y, VV, RR] = calculateHVSR(signal, frame_starts, 
     HVSR_X = HVSR_R;
 	VV = HVSR_R;
 	RR = HVSR_R;
+	XX = HVSR_R;
+	YY = HVSR_R;
 	
 	window = repmat(window, 1, Nch*3);
 	if(draw~=0)
@@ -28,7 +32,7 @@ function [HVSR_R, HVSR_X, HVSR_Y, VV, RR] = calculateHVSR(signal, frame_starts, 
     for ch=1:1:Nch
         for idx = frame_starts
             windata = signal(idx:idx+window_size-1,(3*ch-2):(3*ch)).*window;
-            fftdata = abs(fft(windata, window_size, 1)/window_size);
+            fftdata = abs(fft(windata, window_size, 1))/window_size;
             fftdata = fftdata(1:window_size/2,:)+fftdata(end:-1:1+window_size/2,:);
 			if(fftSmoothN >=1)
 				fftdata = smoothFFT(fftdata, fftSmoothN, freq, 0);
@@ -44,6 +48,8 @@ function [HVSR_R, HVSR_X, HVSR_Y, VV, RR] = calculateHVSR(signal, frame_starts, 
             HVSR_Y(:,frame_starts==idx,ch) = Y ./ Z;
 			VV(:,frame_starts==idx,ch) = Z;
 			RR(:,frame_starts==idx,ch) = R;
+			XX(:,frame_starts==idx,ch) = X;
+			YY(:,frame_starts==idx,ch) = Y;
 			if(draw~=0)
 				if(SkipFrames)
 					SkipFrames = SkipFrames - 1;
