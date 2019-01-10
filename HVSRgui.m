@@ -230,8 +230,8 @@ function createTestTab(tab_group)
 			'GridColor', [1 1 1]*0.7, 'GridAlpha', 1, ...
 		    'FontSize', 20, 'Position', [0.67 0.99-n*0.295 0.32 0.29]);
 		 if(n~=3)
-			 test_tab.UserData.Tax(n).XAxis.Visible = 'off';
-			 test_tab.UserData.Fax(n).XAxis.Visible = 'off';
+% 			 test_tab.UserData.Tax(n).XAxis.Visible = 'off';
+% 			 test_tab.UserData.Fax(n).XAxis.Visible = 'off';
 		 end
 	end
 	linkaxes(test_tab.UserData.Tax);
@@ -288,7 +288,7 @@ function createSignalTab(file)
 	
     data = D(:,2:end);
 	
-	[b, a] = butter(1, 2*0.8/Fs, 'high');
+	[b, a] = butter(1, 2*0.1/Fs, 'high');
 	data = filtfilt(b, a, data);
     data = sensitivity*1E3*(data - ones(length(data),1)*mean(data));%mm/s
 
@@ -828,7 +828,7 @@ global HVSR
 	data_mod = ifft(fftdata_mod, 'symmetric');
 
 	d1 = {'Transverse', 'Radial', 'Vertical'};
-	d1e = cellfun(@(x) [x ' EQ'], d1, 'uniformoutput', 0);
+	d1e = cellfun(@(x) [x ' EQ'], d1, 'UniformOutput', 0);
 	d2 = {'Transverse/HVSR', 'Radial/HVSR', 'Vertical*HVSR'};
 	d2e = {'Transverse EQ/HVSR', 'Radial EQ/HVSR', 'Vertical EQ*HVSR'};
 	t = (1:1:length(data))./HVSR.Fs;
@@ -845,20 +845,21 @@ global HVSR
 			b = plot(t, data_mod(:,n), 'r', 'Parent', tax);
 			loglog(HVSR.f, calcTRV(:,n), 'r', 'Parent', fax);
 			legend(tax, [a b], {d1{n}, d2{n}});
-			legend(fax, d1e{n}, d2e{n},'Location','best');
+			legend(fax, d1e{n}, d2e{n},'Location','northwest');
+			tax.XTickLabel = [];
+			fax.XTickLabel = [];
 		else
 			legend(tax, a, d1{n});
-			legend(fax, d1e{n},'Location','best');
+			legend(fax, d1e{n},'Location','northwest');
 			rng = [max(10e-5,min(min(pDataTRV))) max(max(pDataTRV))];
 			axis(fax, [0.1 HVSR.Fs/2 10.^ceil(log10(rng))]);
+			fax.XTickLabel = fax.XTick;
 		end
 		axis(tax, [t(1) t(end) max(max(abs([data data_mod(:,1:2)])))*[-1.1 1.1]]);
 		
 		fax.YMinorTick = 'on';
-		fax.XTickLabel = fax.XTick;
 		fax.YTick = 10.^(-6:1:1);
 		
-		fax.XTickLabel = fax.XTick;
 		if(n==2)
 			ylabel(tax, 'Velocity [mm/s]', 'Interpreter','tex')
 			ylabel(fax, 'Velolcity [mm/s]/\surd{Hz}', ...
@@ -926,7 +927,7 @@ function exportHVSR(hObject, ~)
 		'Save HVSR Results and Model', PathName);
     if(FileName == 0) ;return; end
 	
-	HVSR.UIParams.hvsr_tab.Children(1).String = tmpLegend;
+	HVSR.UIParams.hvsr_tab.Children(1).String = {'Noise H/V', 'Earthquake H/V'};
 	
     save(fullfile(PN_save, FileName), 'HVSR');
 	
@@ -999,4 +1000,18 @@ function exportHVSR2(hObject, ~)
     fig.Units = 'inches';
     fig.Position = [1 1 9 9.25];
     export_fig(strcat(tmpFN, '_HVSR'), '-c[25 5 48 0]', fig);
+end
+
+function exportHVSR3(hObject, ~)
+    global PathName 
+	fig = hObject.Parent;
+	tab_group = fig.Children(end);
+	test_tab = tab_group.Children(end);
+    if(PathName == 0); PathName = pwd; end 
+    [FileName,PN_save] = uiputfile('*.mat', ...
+		'Save HVSR Results and Model', PathName);
+    if(FileName == 0) ;return; end
+	tmpFN = strcat(PN_save, FileName(1:end-4));
+	tab_group.SelectedTab = test_tab;
+	export_fig(strcat(tmpFN, '_test'), '-c[25 10 50 20]', fig);
 end
