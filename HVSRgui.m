@@ -20,7 +20,7 @@ function HVSRgui
 	HVSR.OptParams.Source = 'L1';
 	HVSR.OptParams.MinPeakProminence = 0.5;
 	HVSR.OptParams.CFreqRange = -1;
-	HVSR.OptParams.PowerRange = [1 256];
+	HVSR.OptParams.PowerRange = [0.1 1024];
 	HVSR.OptParams.GainRange = [0.1 20];
 	HVSR.UIParams.wnd_sliders = [];
     
@@ -966,7 +966,7 @@ function exportHVSR(hObject, ~)
 	else
 		params = HVSR.ExternalModel;
 	end
-	Q = sqrt(1./(2.^(1./(2*params(:,3)))-1));
+	Q = sqrt(1./(2.^(2./params(:,3))-1));
 	D = 1./(2*Q);
 	id = (1:1:length(params))';
 	tbl = array2table(round([params Q D], 3), ...

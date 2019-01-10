@@ -16,7 +16,7 @@ end
 	Wbpf = zeros(N, size(params,1));
 	for fi = 1:1:size(params,1)
 		nrm_f = (f./params(fi,1)).^2;
-		filter_resp = (nrm_f./((1-nrm_f).^2 + nrm_f)).^params(fi,3);
+		filter_resp = (nrm_f./((1-nrm_f).^2 + nrm_f)).^(params(fi,3)/4);
 		Wbpf(:,fi) = offset+gain*params(fi,2)*filter_resp;
 	end
 	Wbpf(Wbpf==0) = min(min(Wbpf(Wbpf>0)));
