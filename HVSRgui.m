@@ -288,7 +288,7 @@ function createSignalTab(file)
 	
     data = D(:,2:end);
 	
-	[b, a] = butter(1, 2*0.1/Fs, 'high');
+	[b, a] = butter(1, 2*0.8/Fs, 'high');
 	data = filtfilt(b, a, data);
     data = sensitivity*1E3*(data - ones(length(data),1)*mean(data));%mm/s
 
@@ -825,6 +825,7 @@ global HVSR
 	ampl = ampl.*[repmat(1./bpf, 1, 2) bpf];
 	theta = [theta(:,1) theta(:,2) theta(:,3)];
 	fftdata_mod = ampl.*exp(1j*theta);	 
+% 	fftdata_mod = [repmat(1./bpf, 1, 2) bpf].*fftdata;
 	data_mod = ifft(fftdata_mod, 'symmetric');
 
 	d1 = {'Transverse', 'Radial', 'Vertical'};
@@ -868,6 +869,8 @@ global HVSR
 	end
 	xlabel(tax, 'Time [s]');
 	xlabel(fax, 'Frequency [Hz]');
+	
+	HVSR.ModifiedData = data_mod;
 end
 
 function loadModel(~,~)
