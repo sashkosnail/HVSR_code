@@ -9,7 +9,7 @@ azimuth = 0:2:360;
 R=ones(361,1)*(log10([0.1 1 2 5 10 25 45])+1.5);
 theta = ((0:360)*2*pi./360)'*ones(1,min(size(R)));
 
-raw = dlmread('WLVO2005.csv');
+raw = dlmread('D:\Projects\PhD\AutoDRM\FinalDataSet\2005\WLVO2005.csv');
 t=raw(subset,1);
 
 tmp = 2*pi*ones(size(f))/360;
@@ -24,6 +24,7 @@ X = zeros(ws/2, length(azimuth));
 Y = zeros(ws/2, length(azimuth)); 
 FFTcirc = zeros(ws/2, 3, length(azimuth));
 figure(21);clf
+
 for id=1:1:length(azimuth)
 	az=azimuth(id);
 	rotM = [cosd(az) -sind(az) 0; sind(az) cosd(az) 0; 0 0 1];
@@ -35,6 +36,7 @@ for id=1:1:length(azimuth)
 	Z(:,id,:) = FFTcirc(:,:,id);
 	plot(X(:,id),Y(:,id)); hold on
 end
+
 figure(22);clf
 titles = {'EW','NS','V'};
 for id = 1:1:size(Z,3)
