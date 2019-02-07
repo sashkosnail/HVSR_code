@@ -31,9 +31,8 @@ function HVSRgui
         
     tab_group = uitabgroup('Parent', fig, 'Units', 'normalized', ...
         'Position', [0, 0.05, 1, 0.95]);
-	HVSR.UIParams.tab_group = tab_group;
 	for idx = 1:1:length(FileName)
-		createSignalTab(FileName{idx});
+		createSignalTab(FileName{idx}, tab_group);
 	end
 	
 	createHVSRTab(tab_group);
@@ -200,21 +199,17 @@ function createHVSRTab(tab_group)
 		    'FontSize', 20);
 	   grid on;
 	end
-	HVSR.UIParams.hvsr_tab = hvsr_tab;
 end
 
 function createModelTab(tab_group)
-global HVSR
 	model_tab = uitab('Parent', tab_group, 'Title', 'ModelHVSR', 'BackgroundColor', 'w');
 	model_tab.UserData.ax = axes('Parent', model_tab, 'DefaultLineLineWidth', 2, ...
 		'Units', 'normalized', 'Position', [0.1 0.1 0.89 0.88], ...
 		'XScale', 'log', 'XGrid', 'on', 'YGrid', 'on', 'NextPlot', 'add', ...
 		   'FontSize', 20, 'GridColor', [1 1 1]*0.7, 'GridAlpha', 1);
-	HVSR.UIParams.model_tab = model_tab;
 end
 
 function createTestTab(tab_group)
-	global HVSR
 	test_tab = uitab('Parent', tab_group, 'Title', 'Test Model', 'BackgroundColor', 'w');
 	for n=1:1:3
 		test_tab.UserData.Tax(n) = axes('Parent', test_tab, ...
@@ -236,12 +231,10 @@ function createTestTab(tab_group)
 	end
 	linkaxes(test_tab.UserData.Tax);
 	linkaxes(test_tab.UserData.Fax);
-	HVSR.UIParams.test_tab = test_tab;
 end
 
-function createSignalTab(file)
+function createSignalTab(file, tab_group)
     global HVSR PathName
-	tab_group = HVSR.UIParams.tab_group;
     tab = uitab('Parent', tab_group, 'Title', file, 'BackgroundColor', 'w');
     matfile = strcat(PathName, file);
     load(matfile,'D');
@@ -256,7 +249,7 @@ function createSignalTab(file)
 	end
 	HVSR.Fs = Fs;
 	
-	sensitivity = 8E-8;
+	sensitivity = (8E8)^1;
 	if(~isempty(strfind(matfile, 'TYNO')))
 		station = [43.09498,-79.87018]; %TYNO
 	elseif(~isempty(strfind(matfile, 'BRCO')))
@@ -288,9 +281,9 @@ function createSignalTab(file)
 	
     data = D(:,2:end);
 	
-	[b, a] = butter(1, 2*0.8/Fs, 'high');
+	[b, a] = butter(1, 2*0.3/Fs, 'high');
 	data = filtfilt(b, a, data);
-    data = sensitivity*1E3*(data - ones(length(data),1)*mean(data));%mm/s
+    data = 1.0/sensitivity*1E3*(data - ones(length(data),1)*mean(data));%mm/s
 
     num_chans = size(data,2)/3;if(num_chans>4); num_chans=4;end
 	HVSR.params.num_chans = num_chans;
@@ -322,7 +315,7 @@ function createSignalTab(file)
 
 		use_file_check.UserData.Data = tmp;
 		use_file_check.UserData.Vector = vector_data(:,kk);
-		chax = subplot('Position', [0.06 0.1 0.935 0.88], ...
+		chax = subplot('Position', [0.06 0.1 0.9 0.85], ...
 		   'FontSize', 20, 'Parent',fig_panel);
 		set(fig_panel, 'UserData', panels(kk));
 		set(panels(kk), 'UserData', chax);
@@ -331,7 +324,6 @@ function createSignalTab(file)
 		parameter_changed(wind_size_slider);
 		HVSR.UIParams.wnd_sliders = [HVSR.UIParams.wnd_sliders wind_size_slider];
 	end
-	HVSR.UIParams.chan_tabs{length(tab_group.Children)} = tab;
 end
 
 function keydown_editbox_CB(hObject, eventData)
@@ -465,14 +457,13 @@ function parameter_changed(hObject, ~, ~)
 	end
 end
 
-function calcHVSR(~,~)
+function calcHVSR(hObject,~)
 	global HVSR isHVSRChanged
 	Fs = HVSR.Fs;
 	frame_size = HVSR.params.frame_size;
 	num_chans = HVSR.params.num_chans;
-	hvsr_tab = HVSR.UIParams.hvsr_tab;
-	
-	tab_grp = HVSR.UIParams.tab_group;
+	tab_grp = hObject.Parent.Children(end);
+	hvsr_tab = tab_grp.Children(end-2);
 	tab_grp.SelectedTab = hvsr_tab;
     window = hann(frame_size + 1);
 	window = window(1:end-1);
@@ -598,14 +589,12 @@ function calcHVSR(~,~)
 	isHVSRChanged = 1;
 end
 
-function modelHVSR(~, ~)
+function modelHVSR(hObject, ~)
 global HVSR isHVSRChanged
 persistent fpeaks upeaks params
-
-	model_tab = HVSR.UIParams.model_tab;
+	tab_grp = hObject.Parent.Children(end);
+	model_tab = tab_grp.Children(end-1);
 	OptParams = HVSR.OptParams;
-
-	tab_grp = HVSR.UIParams.tab_group;
 	tab_grp.SelectedTab = model_tab;
 	ax = model_tab.UserData.ax;
 	all_peaks=[];
@@ -650,7 +639,7 @@ persistent fpeaks upeaks params
 		end
 		problem = SetupProblem();
 		if(isstruct(problem))
-			params = fmincon(problem);
+			params = lsqcurvefit(problem);
 			params = [all_peaks(:,1) reshape(params, numel(params)/2, 2)];
 			[result, Wbpf]= CalculateBPFResponse(params,'freq-sum',0,f);
 			error = abs(result-data)./data;
@@ -742,32 +731,44 @@ persistent fpeaks upeaks params
 		LB = reshape(LB,1,numel(LB));
 		UB = reshape(UB,1,numel(UB));
 
-		options = optimoptions('fmincon');
-		options.Algorithm = 'sqp';
-% 		options.TolX = 1e-10;
+% 		options = optimoptions('fmincon');
+% 		options.Algorithm = 'sqp';
+% % 		options.TolX = 1e-10;
+% 		options.MaxIter = 1000;
+% 		options.MaxFunEvals = Inf;
+% 		options.Display = 'iter';
+% 
+% 		problem.objective = @ObjFunctionFreqSum;
+% 		problem.x0 = params;
+% 		problem.solver = 'fmincon';
+% 		problem.options = options;
+% 		problem.lb = LB;
+% 		problem.ub = UB;
+		options = optimoptions('lsqcurvefit');
 		options.MaxIter = 1000;
 		options.MaxFunEvals = Inf;
 		options.Display = 'iter';
 
 		problem.objective = @ObjFunctionFreqSum;
 		problem.x0 = params;
-		problem.solver = 'fmincon';
+		problem.solver = 'lsqcurvefit';
 		problem.options = options;
 		problem.lb = LB;
 		problem.ub = UB;
+		problem.ydata = data;
+		problem.xdata = f;
 	end
 
-	function res = ObjFunctionFreqSum(params)
+	function response = ObjFunctionFreqSum(params,xdata)
 		params = reshape(params, numel(params)/2, 2);
-		response = CalculateBPFResponse([all_peaks(:,1) params], 'freq-sum', ax, f);
-		res = sum(sqrt((response - data).^2));
+		response = CalculateBPFResponse([all_peaks(:,1) params], 'freq-sum', ax, xdata);
 	end
 end
 
-function testModel(~,~)
+function testModel(hObject,~)
 global HVSR
-	test_tab = HVSR.UIParams.test_tab;
-	tab_grp = HVSR.UIParams.tab_group;
+	tab_grp = hObject.Parent.Children(end);
+	test_tab = tab_grp.Children(end);
 	tab_grp.SelectedTab = test_tab;
 	HT = HVSR.HighSources.T;
 	HR = HVSR.HighSources.R;
@@ -811,7 +812,7 @@ global HVSR
 		'Interpreter','latex');
 
 	ax.XTickLabel = ax.XTick;
-	test_tab.UserData.FFF = fff;
+% 	test_tab.UserData.FFF = fff;
 	
 	data = HVSR.Data{1};
 	f = HVSR.Fs*(0:(length(data)-1)/2)'/length(data);
@@ -852,7 +853,7 @@ global HVSR
 		else
 			legend(tax, a, d1{n});
 			legend(fax, d1e{n},'Location','northwest');
-			rng = [max(10e-5,min(min(pDataTRV))) max(max(pDataTRV))];
+			rng = [max(10e-10,min(min(pDataTRV))) max(max(pDataTRV))];
 			axis(fax, [0.1 HVSR.Fs/2 10.^ceil(log10(rng))]);
 			fax.XTickLabel = fax.XTick;
 		end
@@ -893,6 +894,8 @@ end
 
 function hideSTD(hObject, ~)
 global HVSR
+	tab_grp = hObject.Parent.Children(end);
+	hvsr_tab = tab_grp.Children(end-2);
 	h_std = HVSR.UIParams.hSTD;
 	h_mean = HVSR.UIParams.hMean;
 	if(hObject.Value == 0)
@@ -904,7 +907,7 @@ global HVSR
 		for n=1:1:numel(h_std{k})
 			h_std{k}(n).Visible = state;
 		end
-		ax = HVSR.UIParams.hvsr_tab.UserData.ax(k);
+		ax = hvsr_tab.UserData.ax(k);
 		num_H = size(ax.UserData.HVSR_H,2);
 		num_L = size(ax.UserData.HVSR_L,2);
 		if(strcmp(state, 'on'))
@@ -924,45 +927,49 @@ end
 function exportHVSR(hObject, ~)
     global HVSR PathName tmpLegend
 	fig = hObject.Parent;
-	test_tab = HVSR.UIParams.test_tab;
+	tab_group = hObject.Parent.Children(end);
+	test_tab = tab_group.Children(end);
+	model_tab = tab_group.Children(end-1);
+	hvsr_tab = tab_group.Children(end-2);
+	chan_tabs = tab_group.Children(1:end-3);
     if(PathName == 0); PathName = pwd; end 
     [FileName,PN_save] = uiputfile('*.mat', ...
 		'Save HVSR Results and Model', PathName);
     if(FileName == 0) ;return; end
 	
-	HVSR.UIParams.hvsr_tab.Children(1).String = {'Noise H/V', 'Earthquake H/V'};
+	hvsr_tab.Children(1).String = {'Noise H/V', 'Earthquake H/V'};
 	
     save(fullfile(PN_save, FileName), 'HVSR');
 	
 	tmpFN = strcat(PN_save, FileName(1:end-4));
 	
-	for k=1:1:length(HVSR.UIParams.chan_tabs)
-		HVSR.UIParams.tab_group.SelectedTab = HVSR.UIParams.chan_tabs{k};
+	for k=1:1:length(chan_tabs)
+		tab_group.SelectedTab = chan_tabs(k);
 		export_fig(strcat(tmpFN, '_frames', num2str(k)), ...
 			'-c[30 0 50 100]', fig);
 	end
-	HVSR.UIParams.tab_group.SelectedTab = HVSR.UIParams.test_tab;
+	tab_group.SelectedTab = test_tab;
 	export_fig(strcat(tmpFN, '_test'), '-c[25 10 50 20]', fig);
 	
-	HVSR.UIParams.tab_group.SelectedTab = HVSR.UIParams.hvsr_tab;
+	tab_group.SelectedTab = hvsr_tab;
 	
     fig.Units = 'inches';
     fig.Position = [1 1 9 9.25];
     export_fig(strcat(tmpFN, '_HVSR'), '-c[25 5 48 0]', fig);
-	HVSR.UIParams.tab_group.SelectedTab = HVSR.UIParams.model_tab;
+	tab_group.SelectedTab = model_tab;
 	export_fig(strcat(tmpFN, '_model'), '-c[25 5 48 0]', fig);
 	
 	WindowAPI(fig, 'Maximize');
 	savefig(fig,tmpFN,'compact');
-	if(ishandle(test_tab.UserData.FFF))
-		test_tab.UserData.FFF.Units = 'inches';
-		test_tab.UserData.FFF.Position = [1 1 9 9.25];
-		export_fig(strcat(tmpFN, '_spec'), ...
-			'-c[0 0 0 0]', test_tab.UserData.FFF);
-		WindowAPI(test_tab.UserData.FFF, 'Maximize');
-		savefig(test_tab.UserData.FFF, ...
-			strcat(tmpFN,'_spec'),'compact');
-	end
+% 	if(ishandle(test_tab.UserData.FFF))
+% 		test_tab.UserData.FFF.Units = 'inches';
+% 		test_tab.UserData.FFF.Position = [1 1 9 9.25];
+% 		export_fig(strcat(tmpFN, '_spec'), ...
+% 			'-c[0 0 0 0]', test_tab.UserData.FFF);
+% 		WindowAPI(test_tab.UserData.FFF, 'Maximize');
+% 		savefig(test_tab.UserData.FFF, ...
+% 			strcat(tmpFN,'_spec'),'compact');
+% 	end
 	
 	if(isfield(HVSR, 'ModelParams'))
 		params = HVSR.ModelParams;
