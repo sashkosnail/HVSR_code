@@ -28,7 +28,7 @@ end
 			result = sum(ifft(Wbpf.*Vert),2);
 			result = abs(fft(result)./Vert(:,1));
 		case 'freq-sum'
-			result = sum(Wbpf, 2)+1;
+			result = sum(Wbpf, 2) + 1;
 		otherwise
 			return
 	end	

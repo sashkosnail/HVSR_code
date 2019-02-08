@@ -17,7 +17,7 @@ function HVSRgui
 	HVSR.params.frame_size = frame_size;
 	HVSR.params.frame_overlap = frame_overlap;
 	HVSR.params.fftSmoothN = fftSmoothN;
-	HVSR.OptParams.Source = 'L1';
+	HVSR.OptParams.Source = 'H1';
 	HVSR.OptParams.MinPeakProminence = 0.5;
 	HVSR.OptParams.CFreqRange = -1;
 	HVSR.OptParams.PowerRange = [0.1 1024];
@@ -423,7 +423,7 @@ function parameter_changed(hObject, ~, ~)
     panel.Children(1).UserData.Low = frames_Low;
     panel.Children(1).UserData.High = frames_High;
 	xlabel(ax, 'Time [s]');ylabel(ax, 'Amplitude [mm/s]');
-	axis tight;
+	axis(ax, 'tight');
 	
 	HVSR.params.HighLevel = high_level;
 	
@@ -576,7 +576,7 @@ function calcHVSR(hObject,~)
 		'FontSize', 20, 'Location', 'NorthWest');
 		HVSR.UIParams.hSTD{k} = [h_Ls h_Hs];
 		HVSR.UIParams.hMean{k} = [h_Lm h_Hm]; 
-		grid on; axis tight; ax(k).XScale = 'log'; hold off
+		grid on; axis(ax(k), 'tight'); ax(k).XScale = 'log'; hold off
 		xlim([min(freq) 51]);
 		if(k~=num_chans)
 			set(gca,'Xticklabel',[]);
@@ -599,9 +599,6 @@ persistent fpeaks upeaks params
 	ax = model_tab.UserData.ax;
 	all_peaks=[];
 
-	if(isempty(isHVSRChanged))
-		return
-	end
 	if(isHVSRChanged)
 		fpeaks = [];
 		upeaks = [];
@@ -623,14 +620,19 @@ persistent fpeaks upeaks params
 	
 	function OptimizeAndPlot()
 		cla(ax);
+		ax.NextPlot = 'add';
 		ax.FontSize = 20;
 		p1 = semilogx(f, data , 'b-', 'LineWidth', 2, 'Parent', ax);
-		grid on; axis tight; ax.XScale = 'log'; 
+		grid on; axis(ax, 'tight'); ax.XScale = 'log'; 
 		xlim(ax, [min(f) 50]); hold on
 		ax.XTickLabel = ax.XTick;
 		
+		upeaks = [];
 		if(isfield(HVSR, 'ExternalModel'))
 			fpeaks = HVSR.ExternalModel(:,1);
+			fpeaks = [fpeaks, interp1(f,data,fpeaks)];%data(arrayfun(@(x) find(f==x, 1), fpeaks))];
+		elseif(isfield(HVSR, 'ModelParams'))
+			fpeaks = HVSR.ModelParams(:,1);
 			fpeaks = [fpeaks, data(arrayfun(@(x) find(f==x, 1), fpeaks))];
 		else
 			[pk, loc] = findpeaks(data, f, 'MinPeakProminence', ...
@@ -639,7 +641,8 @@ persistent fpeaks upeaks params
 		end
 		problem = SetupProblem();
 		if(isstruct(problem))
-			params = lsqcurvefit(problem);
+% 			params = lsqcurvefit(problem);
+			params = lsqnonlin(problem);
 			params = [all_peaks(:,1) reshape(params, numel(params)/2, 2)];
 			[result, Wbpf]= CalculateBPFResponse(params,'freq-sum',0,f);
 			error = abs(result-data)./data;
@@ -647,16 +650,16 @@ persistent fpeaks upeaks params
 			p4 = semilogx(f, result, 'k','LineWidth', 2, 'Parent', ax);
 			p5 = semilogx(f, Wbpf, 'k--','LineWidth', 1, 'Parent', ax);
 			p6 = semilogx(f, error,'r--','LineWidth', 2, 'Parent', ax);
-			grid on; axis tight; ax.XScale = 'log'; hold off
+			grid on; axis(ax, 'tight'); ax.XScale = 'log'; hold off
 			xlim(ax, [min(f) 50]);
 
-			legend([p1(1) p4(1) p5(1) p6(1)], ...
+			legend(ax, [p1(1) p4(1) p5(1) p6(1)], ...
 				{'HVSR', 'Model Response', 'Bandpass Filters', ...
 				['Error RMS:' num2str(round(rms(error),3))]}, ...
 				'FontSize', 20, 'Location', 'northwest');
 			HVSR.ModelParams = params;
-			xlabel('Frequency [Hz]');
-			ylabel('H/V');
+			xlabel(ax,'Frequency [Hz]', 'FontSize', 20);
+			ylabel(ax,'H/V', 'FontSize', 20);
 			ax.XTickLabel = ax.XTick;
 		end
 	end
@@ -727,6 +730,10 @@ persistent fpeaks upeaks params
 			UB(fi,:) = [OptParams.GainRange(2) OptParams.PowerRange(2)];
 		end
 		
+		if(isfield(HVSR, 'ExternalModel'))
+			params = HVSR.ExternalModel(:,2:end);
+		end
+		
 		params = reshape(params,1,numel(params));
 		LB = reshape(LB,1,numel(LB));
 		UB = reshape(UB,1,numel(UB));
@@ -744,24 +751,25 @@ persistent fpeaks upeaks params
 % 		problem.options = options;
 % 		problem.lb = LB;
 % 		problem.ub = UB;
-		options = optimoptions('lsqcurvefit');
+		options = optimoptions('lsqnonlin');
 		options.MaxIter = 1000;
 		options.MaxFunEvals = Inf;
 		options.Display = 'iter';
 
 		problem.objective = @ObjFunctionFreqSum;
 		problem.x0 = params;
-		problem.solver = 'lsqcurvefit';
+		problem.solver = 'lsqnonlin';
 		problem.options = options;
 		problem.lb = LB;
 		problem.ub = UB;
-		problem.ydata = data;
-		problem.xdata = f;
+% 		problem.ydata = data;
+% 		problem.xdata = f;
 	end
 
-	function response = ObjFunctionFreqSum(params,xdata)
+	function res = ObjFunctionFreqSum(params,xdata)
 		params = reshape(params, numel(params)/2, 2);
-		response = CalculateBPFResponse([all_peaks(:,1) params], 'freq-sum', ax, xdata);
+		response = CalculateBPFResponse([all_peaks(:,1) params], 'freq-sum', ax, f);
+		res = response-data;
 	end
 end
 
@@ -853,7 +861,7 @@ global HVSR
 		else
 			legend(tax, a, d1{n});
 			legend(fax, d1e{n},'Location','northwest');
-			rng = [max(10e-10,min(min(pDataTRV))) max(max(pDataTRV))];
+			rng = [max(10e-5,min(min(pDataTRV))) max(max(pDataTRV))];
 			axis(fax, [0.1 HVSR.Fs/2 10.^ceil(log10(rng))]);
 			fax.XTickLabel = fax.XTick;
 		end
