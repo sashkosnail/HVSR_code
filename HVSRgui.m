@@ -9,7 +9,7 @@ function HVSRgui
 		return; 
 	end    
     frame_margin = 0.01;
-    frame_size = 2048;
+    frame_size = 8192;
     frame_overlap = 0.5;
 	fftSmoothN = 256;
 	HVSR = struct('Fs', -1);
