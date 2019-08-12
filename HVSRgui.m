@@ -9,7 +9,7 @@ function HVSRgui
 		return; 
 	end    
     frame_margin = 0.01;
-    frame_size = 8192;
+    frame_size = 1024;
     frame_overlap = 0.5;
 	fftSmoothN = 256;
 	HVSR = struct('Fs', -1);
@@ -26,7 +26,11 @@ function HVSRgui
     
     fig = figure(1000); clf
     pause(0.00001);
+	pan off
     set(fig, 'ToolBar', 'none', 'Color', 'w');
+	fig.Units = 'inch';
+	fig.Position = [0.5 0.5 12 10];
+	fig.Units = 'normalized';
     WindowAPI(fig, 'Maximize');
         
     tab_group = uitabgroup('Parent', fig, 'Units', 'normalized', ...
@@ -217,13 +221,13 @@ function createTestTab(tab_group)
 			'NextPlot', 'add', 'XScale', 'linear', 'XGrid', 'on', ...
 			'YGrid', 'on', 'GridColorMode', 'manual', ...
 			'GridColor', [1 1 1]*0.7, 'GridAlpha', 1, ...
-		    'FontSize', 20, 'Position', [0.06 0.99-n*0.295 0.54 0.29]);
+		    'FontSize', 20, 'Position', [0.1 0.99-n*0.295 0.5 0.29]);
 	   test_tab.UserData.Fax(n) = axes('Parent', test_tab, ...
 			'DefaultLineLineWidth', 2, 'Units', 'normalized', ...
 			'NextPlot', 'add', 'XScale', 'log', 'XGrid', 'on', ...
 			'YGrid', 'on', 'YScale', 'log', 'GridColorMode', 'manual', ...
 			'GridColor', [1 1 1]*0.7, 'GridAlpha', 1, ...
-		    'FontSize', 20, 'Position', [0.67 0.99-n*0.295 0.32 0.29]);
+		    'FontSize', 20, 'Position', [0.7 0.99-n*0.295 0.28 0.29]);
 		 if(n~=3)
 % 			 test_tab.UserData.Tax(n).XAxis.Visible = 'off';
 % 			 test_tab.UserData.Fax(n).XAxis.Visible = 'off';
@@ -248,7 +252,10 @@ function createSignalTab(file, tab_group)
 		Fs = 1/(t(2)-t(1));
 	end
 	HVSR.Fs = Fs;
-	
+	tmp = regexp(matfile,'[A-Z]{4}','match');
+	HVSR.StationName = tmp{1};
+	tmp = regexp(matfile,'20[0-9]{2}','match');
+	HVSR.EventYear = tmp{1};
 	sensitivity = (8E8)^1;
 	if(~isempty(strfind(matfile, 'TYNO')))
 		station = [43.09498,-79.87018]; %TYNO
@@ -359,7 +366,7 @@ global HVSR
 		case 8 
 			HVSR.OptParams.GainRange = val;
 		case 9
-			HVSR.fftSmoothN = val;
+			HVSR.params.fftSmoothN = val;
 			calc_hvsr = 1;
 		otherwise
 	end
@@ -369,7 +376,7 @@ global HVSR
 		end
 	end
 	if(calc_hvsr)
-		calcHVSR();
+		calcHVSR(hObject);
 	end
 end
 
@@ -484,19 +491,18 @@ function calcHVSR(hObject,~)
 			HVSR.Data{k} = userdata.Data;
             if(usefile.Value)
 % 				[HVSR_R, HVSR_X, HVSR_Y, XX, YY, VV, RR]
-                [H, ~, ~, H_T, H_R, H_V, H_H] = calculateHVSR(userdata.Data, userdata.High, window, 0);
-                [L, ~, ~, L_T, L_R, L_V, L_H] = calculateHVSR(userdata.Data, userdata.Low, window, 0);
-
-                ax(k).UserData.HVSR_H = [ax(k).UserData.HVSR_H H]; 
-                ax(k).UserData.HVSR_L = [ax(k).UserData.HVSR_L L];
-				ax(k).UserData.HT = [ax(k).UserData.HVert H_T]; 
+                [L, ~, ~, L_T, L_R, L_V, L_H] = calculateHVSR(userdata.Data, [], window, 0);
+                ax(k).UserData.HVSR_L = [ax(k).UserData.HVSR_L L]; 
                 ax(k).UserData.LT = [ax(k).UserData.LVert L_T]; 
-				ax(k).UserData.HR = [ax(k).UserData.HVert H_R]; 
                 ax(k).UserData.LR = [ax(k).UserData.LVert L_R]; 
-				ax(k).UserData.HV = [ax(k).UserData.HVert H_V]; 
                 ax(k).UserData.LV = [ax(k).UserData.LVert L_V]; 
-				ax(k).UserData.HH = [ax(k).UserData.HVert H_H]; 
                 ax(k).UserData.LH = [ax(k).UserData.LVert L_H]; 
+				[H, ~, ~, H_T, H_R, H_V, H_H] = calculateHVSR(userdata.Data, userdata.High, window, 0);
+                ax(k).UserData.HVSR_H = [ax(k).UserData.HVSR_H H]; 
+				ax(k).UserData.HT = [ax(k).UserData.HVert H_T]; 
+				ax(k).UserData.HR = [ax(k).UserData.HVert H_R];
+				ax(k).UserData.HV = [ax(k).UserData.HVert H_V];  
+				ax(k).UserData.HH = [ax(k).UserData.HVert H_H];
             end
         end
     end
@@ -838,9 +844,9 @@ global HVSR
 	data_mod = ifft(fftdata_mod, 'symmetric');
 
 	d1 = {'Transverse', 'Radial', 'Vertical'};
-	d1e = cellfun(@(x) [x ' EQ'], d1, 'UniformOutput', 0);
+	d1e = cellfun(@(x) [x ' S'], d1, 'UniformOutput', 0);
 	d2 = {'Transverse/HVSR', 'Radial/HVSR', 'Vertical*HVSR'};
-	d2e = {'Transverse EQ/HVSR', 'Radial EQ/HVSR', 'Vertical EQ*HVSR'};
+	d2e = {'Transverse S/HVSR', 'Radial S/HVSR', 'Vertical S*HVSR'};
 	t = (1:1:length(data))./HVSR.Fs;
 	
 	for n=1:1:3
@@ -858,11 +864,13 @@ global HVSR
 			legend(fax, d1e{n}, d2e{n},'Location','northwest');
 			tax.XTickLabel = [];
 			fax.XTickLabel = [];
+			fax.XTick = 10.^[-1 0 1 log10(50)];
 		else
 			legend(tax, a, d1{n});
 			legend(fax, d1e{n},'Location','northwest');
 			rng = [max(10e-5,min(min(pDataTRV))) max(max(pDataTRV))];
 			axis(fax, [0.1 HVSR.Fs/2 10.^ceil(log10(rng))]);
+			fax.XTick = 10.^[-1 0 1 log10(50)];
 			fax.XTickLabel = fax.XTick;
 		end
 		axis(tax, [t(1) t(end) max(max(abs([data data_mod(:,1:2)])))*[-1.1 1.1]]);
@@ -878,26 +886,65 @@ global HVSR
 	end
 	xlabel(tax, 'Time [s]');
 	xlabel(fax, 'Frequency [Hz]');
-	
+	axes(tax);
+	[x, ~] = ginput(1);
+	x = 10*floor(x/10.0);
+	xlim(tax, [x x+100]);
+	pan yon;
 	HVSR.ModifiedData = data_mod;
 end
 
-function loadModel(~,~)
-global PathName HVSR
-	[FileName, PathName, ~] = uigetfile([PathName, '\*.mat'],'Pick File');
+function loadModel(hObject,~)
+global HVSR
+	[FileName, pn, ~] = uigetfile('\*.mat', 'Pick File', ...
+		['D:\Projects\PhD\AutoDRM\P2data_PandS\noise\2AM_models\', ...
+		HVSR.StationName, '2am.mat']);
     if(~iscell(FileName))
         FileName = {FileName}; end
 	if(FileName{1} == 0)
 		return; 
 	end
-	m = matfile([PathName FileName{1}]);
+	m = matfile([pn FileName{1}]);
 	try
 		tmp = m.HVSR;
 		HVSR.ExternalModel = tmp.ModelParams;
+		disp('External Model Loaded')
 	catch
 		tmp = m.HVSR;
 		HVSR.ExternalModel = tmp.ExternalModel;
 	end
+	switch upper(HVSR.OptParams.Source(1))
+	case 'L'
+		data = HVSR.LowSources(1).mean;
+	case 'H'
+		data = HVSR.HighSources(1).mean;
+	end
+	tab_grp = hObject.Parent.Children(end);
+	model_tab = tab_grp.Children(end-1);
+	tab_grp.SelectedTab = model_tab;
+	ax = model_tab.UserData.ax;
+	f=HVSR.f;
+	p1 = semilogx(f, data , 'b-', 'LineWidth', 2, 'Parent', ax);
+	grid on; axis(ax, 'tight'); ax.XScale = 'log'; 
+	xlim(ax, [min(f) 50]); hold on
+	ax.XTickLabel = ax.XTick;
+	[result, Wbpf]= CalculateBPFResponse(HVSR.ExternalModel,'freq-sum',0,f);
+	error = abs(result-data)./data;
+	error(isinf(error)) = 0;
+
+	p4 = semilogx(f, result, 'k','LineWidth', 2, 'Parent', ax);
+	p5 = semilogx(f, Wbpf, 'k--','LineWidth', 1, 'Parent', ax);
+	p6 = semilogx(f, error,'r--','LineWidth', 2, 'Parent', ax);
+	grid on; axis(ax, 'tight'); ax.XScale = 'log'; hold off
+	xlim(ax, [min(f) 50]);
+	
+	legend(ax, [p1(1) p4(1) p5(1) p6(1)], ...
+		{'HVSR', 'Model Response', 'Bandpass Filters', ...
+		['Error RMS:' num2str(round(rms(error),3))]}, ...
+		'FontSize', 20, 'Location', 'northwest');
+	xlabel(ax,'Frequency [Hz]', 'FontSize', 20);
+	ylabel(ax,'H/V', 'FontSize', 20);
+	ax.XTickLabel = ax.XTick;
 end
 
 function hideSTD(hObject, ~)
@@ -933,23 +980,27 @@ global HVSR
 end
 
 function exportHVSR(hObject, ~)
-    global HVSR PathName tmpLegend
+    global HVSR PathName
 	fig = hObject.Parent;
 	tab_group = hObject.Parent.Children(end);
 	test_tab = tab_group.Children(end);
 	model_tab = tab_group.Children(end-1);
 	hvsr_tab = tab_group.Children(end-2);
 	chan_tabs = tab_group.Children(1:end-3);
-    if(PathName == 0); PathName = pwd; end 
-    [FileName,PN_save] = uiputfile('*.mat', ...
-		'Save HVSR Results and Model', PathName);
+    if(PathName == 0); PathName = pwd; end
+    [FileName,PN_save] = uiputfile('.mat', ...
+		'Save HVSR Results and Model', ...
+		[PathName HVSR.StationName HVSR.EventYear '.mat']);
     if(FileName == 0) ;return; end
 	
-	hvsr_tab.Children(1).String = {'Noise H/V', 'Earthquake H/V'};
+% 	hvsr_tab.Children(1).String = {'Noise H/V', 'Earthquake H/V'};
 	
     save(fullfile(PN_save, FileName), 'HVSR');
 	
 	tmpFN = strcat(PN_save, FileName(1:end-4));
+	
+	fig.Units = 'inches';
+	fig.Position =[0.5 0.5 12 10];
 	
 	for k=1:1:length(chan_tabs)
 		tab_group.SelectedTab = chan_tabs(k);
@@ -957,7 +1008,7 @@ function exportHVSR(hObject, ~)
 			'-c[30 0 50 100]', fig);
 	end
 	tab_group.SelectedTab = test_tab;
-	export_fig(strcat(tmpFN, '_test'), '-c[25 10 50 20]', fig);
+	export_fig(strcat(tmpFN, '_test'), '-c[37 5 65 5]', fig);
 	
 	tab_group.SelectedTab = hvsr_tab;
 	
@@ -1011,7 +1062,7 @@ function exportHVSR2(hObject, ~)
 	tmpFN = strcat(PN_save, FileName(1:end-4));
 	
 	tab_group.SelectedTab = test_tab;
-	export_fig(strcat(tmpFN, '_test'), '-c[25 10 50 20]', fig);
+	export_fig(strcat(tmpFN, '_test'), '-c[30 20 60 15]', fig);
 	
 	tab_group.SelectedTab = hvsr_tab;
 	
@@ -1031,5 +1082,5 @@ function exportHVSR3(hObject, ~)
     if(FileName == 0) ;return; end
 	tmpFN = strcat(PN_save, FileName(1:end-4));
 	tab_group.SelectedTab = test_tab;
-	export_fig(strcat(tmpFN, '_test'), '-c[25 10 50 20]', fig);
+	export_fig(strcat(tmpFN, '_test'), '-c[30 20 60 15]', fig);
 end

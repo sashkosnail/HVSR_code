@@ -77,6 +77,7 @@ fig.Name = 'Smoothing Functions';
 	axis([0.1 Fs/2 -80 1]);
 	setupFigure(ax, h, [], repmat(colors,3,1));
 	h(1).Parent.XTick = sort([0.1 tmpf Fs/2 10 1]);
+	h(1).LineWidth = 1.75;
 	l=legend({'-3dB' names{3:end-1}});
 	l.Location='NorthWest';
 	ylabel('Amplitue[dB]');
@@ -91,6 +92,7 @@ fig.Name = 'BPF Smoothed Spectra';
 	hold on
 	axis([0.1 50 0.001 1])
 	h(1).Parent.XTickLabel = [0.1 1 10];
+	h(1).LineWidth = 1.75;
 	setupFigure(ax1, h, names(1:3), colors([4 3 1]));
 	
 % fig = figure(3);clf;
