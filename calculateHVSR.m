@@ -11,7 +11,7 @@ function [HVSR_R, HVSR_X, HVSR_Y, XX, YY, VV, RR] = ...
     freq = Fs*(0:frame_size/2-1)'/frame_size;
 	
 	[b, a] = butter(4, 2*0.1/Fs, 'high');
-	signal = filtfilt(b, a, signal);
+% 	signal = filtfilt(b, a, signal);
 
     window_size = length(window);
     Nch = floor(size(signal,2)/3);
